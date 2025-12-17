@@ -7,9 +7,16 @@ import 'package:permission_handler/permission_handler.dart';
 import 'package:flutter_sound/flutter_sound.dart';
 import 'worker_model.dart'; // Import the worker model
 import 'add_worker_page.dart'; // Import the add worker page
+import 'package:provider/provider.dart';
+import 'worker_provider.dart';
 
 void main() {
-  runApp(const EvokApp());
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => WorkerProvider(),
+      child: const EvokApp(),
+    ),
+  );
 }
 
 class EvokApp extends StatelessWidget {
@@ -329,199 +336,215 @@ class HomeContent extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          // Header
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceBetween,
-              children: [
-                Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
+    return Consumer<WorkerProvider>(
+      builder: (context, workerProvider, child) {
+        final allWorkers = workerProvider.activeWorkers;
+
+        return SafeArea(
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    const Text(
-                      'EVOK Supervisor',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'EVOK Supervisor',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Text(
+                          'Dashboard',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Real-time Worker Monitoring',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
                     ),
-                    const Text(
-                      'Dashboard',
-                      style: TextStyle(
-                        fontSize: 20,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Real-time Worker Monitoring',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.6),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SupervisorLoginPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: const Text('Logout'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
                       ),
                     ),
                   ],
                 ),
-                ElevatedButton.icon(
-                  onPressed: () {
-                    Navigator.pushReplacement(
-                      context,
-                      MaterialPageRoute(
-                        builder: (context) => const SupervisorLoginPage(),
-                      ),
-                    );
-                  },
-                  icon: const Icon(Icons.logout, size: 18),
-                  label: const Text('Logout'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(
-                      horizontal: 16,
-                      vertical: 10,
-                    ),
-                  ),
-                ),
-              ],
-            ),
-          ),
+              ),
 
-          // Content
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.all(20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  // Stats Cards
-                  Row(
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
                     children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          'Active\nWorkers',
-                          '2',
-                          'Currently online',
-                          const Color(0xFF00FF41),
-                          Icons.people_outline,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Active\nAlerts',
-                          '1',
-                          'Requiring attention',
-                          Colors.red,
-                          Icons.warning_amber_outlined,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          'Offline\nWorkers',
-                          '1',
-                          'Connection lost',
-                          Colors.grey,
-                          Icons.signal_wifi_off,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Mine Layout - Live Positions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildMineLayout(),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Worker Status Overview',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildWorkerCard(
-                    'Marcus Johnson',
-                    'VEST-001',
-                    '78 BPM',
-                    '98.6°F',
-                    '98% SpO₂',
-                    'ONLINE',
-                    const Color(0xFF00FF41),
-                    '4 min ago',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildWorkerCard(
-                    'Sarah Chen',
-                    'VEST-002',
-                    '95 BPM',
-                    '99.2°F',
-                    '94% SpO₂',
-                    'ALERT',
-                    Colors.red,
-                    '1 min ago',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildWorkerCard(
-                    'David Rodriguez',
-                    'VEST-003',
-                    '72 BPM',
-                    '98.4°F',
-                    '97% SpO₂',
-                    'ONLINE',
-                    const Color(0xFF00FF41),
-                    '3 min ago',
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Quick Actions',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: ElevatedButton.icon(
-                          onPressed: () {},
-                          icon: const Icon(Icons.campaign),
-                          label: const Text('Emergency Broadcast'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: Colors.red,
-                            foregroundColor: Colors.white,
-                            padding: const EdgeInsets.symmetric(vertical: 16),
-                            shape: RoundedRectangleBorder(
-                              borderRadius: BorderRadius.circular(12),
+                      // Stats Cards - Now using real data
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              'Active\nWorkers',
+                              workerProvider.activeWorkersCount.toString(),
+                              'Currently online',
+                              const Color(0xFF00FF41),
+                              Icons.people_outline,
                             ),
                           ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Active\nAlerts',
+                              workerProvider.alertsCount.toString(),
+                              'Requiring attention',
+                              Colors.red,
+                              Icons.warning_amber_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Offline\nWorkers',
+                              workerProvider.offlineWorkersCount.toString(),
+                              'Connection lost',
+                              Colors.grey,
+                              Icons.signal_wifi_off,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Mine Layout - Live Positions',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
                         ),
                       ),
-                      const SizedBox(width: 12),
+                      const SizedBox(height: 12),
+                      _buildMineLayout(workerProvider),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Worker Status Overview',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Display real worker data
+                      if (allWorkers.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.people_outline,
+                                  size: 64,
+                                  color: Colors.white.withOpacity(0.3),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No active workers',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ...allWorkers.map((worker) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildWorkerCard(
+                              worker.name,
+                              worker.vestId,
+                              '75 BPM', // Default vitals
+                              '98.6°F',
+                              '97% SpO₂',
+                              worker.status,
+                              worker.statusColor,
+                              '2 min ago',
+                            ),
+                          );
+                        }).toList(),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Quick Actions',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {},
+                              icon: const Icon(Icons.campaign),
+                              label: const Text('Emergency Broadcast'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
                     ],
                   ),
-                  const SizedBox(height: 20),
-                ],
+                ),
               ),
-            ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
@@ -574,7 +597,10 @@ class HomeContent extends StatelessWidget {
     );
   }
 
-  Widget _buildMineLayout() {
+  Widget _buildMineLayout(WorkerProvider provider) {
+    final onlineWorkers = provider.onlineWorkers;
+    final alertWorkers = provider.alertWorkers;
+
     return Container(
       height: 220,
       decoration: BoxDecoration(
@@ -587,9 +613,34 @@ class HomeContent extends StatelessWidget {
             size: const Size(double.infinity, 220),
             painter: GridPainter(),
           ),
-          Positioned(left: 180, top: 110, child: _buildWorkerDot(Colors.green)),
-          Positioned(left: 130, top: 150, child: _buildWorkerDot(Colors.green)),
-          Positioned(right: 100, top: 80, child: _buildWorkerDot(Colors.red)),
+          // Position workers dynamically based on their status
+          ...List.generate(onlineWorkers.length, (index) {
+            final positions = [
+              const Offset(180, 110),
+              const Offset(130, 150),
+              const Offset(220, 80),
+              const Offset(100, 100),
+            ];
+            if (index < positions.length) {
+              return Positioned(
+                left: positions[index].dx,
+                top: positions[index].dy,
+                child: _buildWorkerDot(Colors.green),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
+          ...List.generate(alertWorkers.length, (index) {
+            final positions = [const Offset(280, 80), const Offset(150, 70)];
+            if (index < positions.length) {
+              return Positioned(
+                left: positions[index].dx,
+                top: positions[index].dy,
+                child: _buildWorkerDot(Colors.red),
+              );
+            }
+            return const SizedBox.shrink();
+          }),
           Positioned(
             bottom: 12,
             left: 0,
@@ -597,9 +648,12 @@ class HomeContent extends StatelessWidget {
             child: Row(
               mainAxisAlignment: MainAxisAlignment.center,
               children: [
-                _buildLegendItem(Colors.green, 'Online'),
+                _buildLegendItem(
+                  Colors.green,
+                  'Online (${onlineWorkers.length})',
+                ),
                 const SizedBox(width: 16),
-                _buildLegendItem(Colors.red, 'Alert'),
+                _buildLegendItem(Colors.red, 'Alert (${alertWorkers.length})'),
                 const SizedBox(width: 16),
                 _buildLegendItem(Colors.grey, 'Offline'),
               ],
@@ -748,6 +802,8 @@ class HomeContent extends StatelessWidget {
 }
 
 // ==================== 2. WORKER MANAGEMENT CONTENT ====================
+// Replace the entire WorkerManagementContent class with this:
+
 class WorkerManagementContent extends StatefulWidget {
   const WorkerManagementContent({Key? key}) : super(key: key);
 
@@ -758,62 +814,11 @@ class WorkerManagementContent extends StatefulWidget {
 
 class _WorkerManagementContentState extends State<WorkerManagementContent> {
   final TextEditingController _searchController = TextEditingController();
-  List<Worker> workers = [];
   List<Worker> filteredWorkers = [];
 
   @override
   void initState() {
     super.initState();
-    // Initialize with dummy data
-    workers = [
-      Worker(
-        name: 'Marcus Johnson',
-        id: '001',
-        vestId: 'VEST-001',
-        shift: 'Day Shift',
-        department: 'Excavation',
-        location: 'Tunnel A-2',
-        assigned: '2025-01-20',
-        status: 'ONLINE',
-        statusColor: const Color(0xFF00FF41),
-      ),
-      Worker(
-        name: 'Sarah Chen',
-        id: '002',
-        vestId: 'VEST-002',
-        shift: 'Day Shift',
-        department: 'Safety Inspection',
-        location: 'Tunnel B-1',
-        assigned: '2025-01-20',
-        status: 'ALERT',
-        statusColor: Colors.red,
-      ),
-      Worker(
-        name: 'David Rodriguez',
-        id: '003',
-        vestId: 'VEST-003',
-        shift: 'Night Shift',
-        department: 'Maintenance',
-        location: 'Central Hub',
-        assigned: '2025-01-20',
-        status: 'ONLINE',
-        statusColor: const Color(0xFF00FF41),
-      ),
-      Worker(
-        name: 'Emily Watson',
-        id: '004',
-        vestId: 'VEST-004',
-        shift: 'Day Shift',
-        department: 'Transport',
-        location: 'Unknown',
-        assigned: '2025-01-19',
-        status: 'OFFLINE',
-        statusColor: Colors.grey,
-      ),
-    ];
-    filteredWorkers = workers;
-
-    // Add listener to search controller
     _searchController.addListener(_filterWorkers);
   }
 
@@ -824,206 +829,210 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
   }
 
   void _filterWorkers() {
+    setState(() {}); // Trigger rebuild to update filtered list
+  }
+
+  List<Worker> _getFilteredWorkers(List<Worker> workers) {
     final query = _searchController.text.toLowerCase();
-    setState(() {
-      if (query.isEmpty) {
-        filteredWorkers = workers;
-      } else {
-        filteredWorkers = workers.where((worker) {
-          return worker.name.toLowerCase().contains(query) ||
-              worker.vestId.toLowerCase().contains(query) ||
-              worker.id.contains(query);
-        }).toList();
-      }
-    });
-  }
-
-  void _addNewWorker(Worker worker) {
-    setState(() {
-      workers.add(worker);
-      _filterWorkers(); // Update filtered list
-    });
-  }
-
-  String _getNextWorkerId() {
-    if (workers.isEmpty) return '001';
-
-    int maxId = 0;
-    for (var worker in workers) {
-      int currentId = int.tryParse(worker.id) ?? 0;
-      if (currentId > maxId) {
-        maxId = currentId;
-      }
+    if (query.isEmpty) {
+      return workers;
+    } else {
+      return workers.where((worker) {
+        return worker.name.toLowerCase().contains(query) ||
+            worker.vestId.toLowerCase().contains(query) ||
+            worker.id.contains(query);
+      }).toList();
     }
-    return (maxId + 1).toString().padLeft(3, '0');
-  }
-
-  int _getActiveWorkersCount() {
-    return workers.where((w) => w.status == 'ONLINE').length;
-  }
-
-  int _getAlertsCount() {
-    return workers.where((w) => w.status == 'ALERT').length;
   }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Worker Management',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'Smart Vest Allocation & Tracking',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
-                ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                Expanded(
-                  child: Container(
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A3344),
-                      borderRadius: BorderRadius.circular(12),
+    return Consumer<WorkerProvider>(
+      builder: (context, workerProvider, child) {
+        final filteredWorkers = _getFilteredWorkers(workerProvider.workers);
+
+        return SafeArea(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Worker Management',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
                     ),
-                    child: TextField(
-                      controller: _searchController,
-                      style: const TextStyle(color: Colors.white),
-                      decoration: InputDecoration(
-                        hintText: 'Search workers or vest IDs...',
-                        hintStyle: TextStyle(
-                          color: Colors.white.withOpacity(0.4),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Smart Vest Allocation & Tracking',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A3344),
+                          borderRadius: BorderRadius.circular(12),
                         ),
-                        prefixIcon: Icon(
-                          Icons.search,
-                          color: Colors.white.withOpacity(0.5),
-                        ),
-                        border: InputBorder.none,
-                        contentPadding: const EdgeInsets.symmetric(
-                          horizontal: 16,
-                          vertical: 14,
+                        child: TextField(
+                          controller: _searchController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Search workers or vest IDs...',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.4),
+                            ),
+                            prefixIcon: Icon(
+                              Icons.search,
+                              color: Colors.white.withOpacity(0.5),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 16,
+                              vertical: 14,
+                            ),
+                          ),
                         ),
                       ),
                     ),
-                  ),
-                ),
-                const SizedBox(width: 12),
-                Container(
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF00FF41),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: IconButton(
-                    onPressed: () async {
-                      final newWorker = await Navigator.push<Worker>(
-                        context,
-                        MaterialPageRoute(
-                          builder: (context) =>
-                              AddWorkerPage(nextWorkerId: _getNextWorkerId()),
-                        ),
-                      );
+                    const SizedBox(width: 12),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00FF41),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        onPressed: () async {
+                          final newWorker = await Navigator.push<Worker>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (context) => AddWorkerPage(
+                                nextWorkerId: workerProvider.getNextWorkerId(),
+                              ),
+                            ),
+                          );
 
-                      if (newWorker != null) {
-                        _addNewWorker(newWorker);
-                      }
-                    },
-                    icon: const Icon(Icons.add, color: Colors.black),
-                    iconSize: 28,
-                  ),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem(
-                  workers.length.toString(),
-                  'Total Workers',
-                  Colors.white,
-                ),
-                _buildStatItem(
-                  _getActiveWorkersCount().toString(),
-                  'Active',
-                  const Color(0xFF00FF41),
-                ),
-                _buildStatItem(
-                  _getAlertsCount().toString(),
-                  'Alerts',
-                  Colors.red,
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: filteredWorkers.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        Icon(
-                          Icons.person_search,
-                          size: 64,
-                          color: Colors.white.withOpacity(0.3),
-                        ),
-                        const SizedBox(height: 16),
-                        Text(
-                          'No workers found',
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white.withOpacity(0.6),
-                          ),
-                        ),
-                      ],
+                          if (newWorker != null) {
+                            workerProvider.addWorker(newWorker);
+                            if (mounted) {
+                              ScaffoldMessenger.of(context).showSnackBar(
+                                SnackBar(
+                                  content: Text(
+                                    '${newWorker.name} added successfully',
+                                  ),
+                                  backgroundColor: const Color(0xFF00FF41),
+                                  behavior: SnackBarBehavior.floating,
+                                ),
+                              );
+                            }
+                          }
+                        },
+                        icon: const Icon(Icons.add, color: Colors.black),
+                        iconSize: 28,
+                      ),
                     ),
-                  )
-                : ListView.builder(
-                    padding: const EdgeInsets.symmetric(horizontal: 20),
-                    itemCount: filteredWorkers.length,
-                    itemBuilder: (context, index) {
-                      final worker = filteredWorkers[index];
-                      return Padding(
-                        padding: const EdgeInsets.only(bottom: 16),
-                        child: _buildWorkerDetailCard(
-                          name: worker.name,
-                          id: worker.id,
-                          vestId: worker.vestId,
-                          shift: worker.shift,
-                          department: worker.department,
-                          location: worker.location,
-                          assigned: worker.assigned,
-                          status: worker.status,
-                          statusColor: worker.statusColor,
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceAround,
+                  children: [
+                    _buildStatItem(
+                      workerProvider.workers.length.toString(),
+                      'Total Workers',
+                      Colors.white,
+                    ),
+                    _buildStatItem(
+                      workerProvider.activeWorkersCount.toString(),
+                      'Active',
+                      const Color(0xFF00FF41),
+                    ),
+                    _buildStatItem(
+                      workerProvider.alertsCount.toString(),
+                      'Alerts',
+                      Colors.red,
+                    ),
+                  ],
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: filteredWorkers.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              Icons.person_search,
+                              size: 64,
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _searchController.text.isEmpty
+                                  ? 'No workers added yet'
+                                  : 'No workers found',
+                              style: TextStyle(
+                                fontSize: 16,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                            ),
+                            if (_searchController.text.isEmpty) ...[
+                              const SizedBox(height: 8),
+                              Text(
+                                'Tap + to add your first worker',
+                                style: TextStyle(
+                                  fontSize: 14,
+                                  color: Colors.white.withOpacity(0.4),
+                                ),
+                              ),
+                            ],
+                          ],
                         ),
-                      );
-                    },
-                  ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: filteredWorkers.length,
+                        itemBuilder: (context, index) {
+                          final worker = filteredWorkers[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildWorkerDetailCard(
+                              name: worker.name,
+                              id: worker.id,
+                              vestId: worker.vestId,
+                              shift: worker.shift,
+                              department: worker.department,
+                              location: worker.location,
+                              assigned: worker.assigned,
+                              status: worker.status,
+                              statusColor: worker.statusColor,
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
