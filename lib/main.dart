@@ -1015,6 +1015,7 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
                           return Padding(
                             padding: const EdgeInsets.only(bottom: 16),
                             child: _buildWorkerDetailCard(
+                              workerId: worker.id,
                               name: worker.name,
                               id: worker.id,
                               vestId: worker.vestId,
@@ -1057,6 +1058,7 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
   }
 
   Widget _buildWorkerDetailCard({
+    required String workerId,
     required String name,
     required String id,
     required String vestId,
@@ -1166,13 +1168,46 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  onPressed: () {},
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Worker'),
+                        content: const Text(
+                          'Are you sure you want to delete this worker permanently?',
+                        ),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      context.read<WorkerProvider>().removeWorker(workerId);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Worker deleted successfully'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
                   style: ElevatedButton.styleFrom(
                     backgroundColor: Colors.red,
                     foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 12),
                   ),
-                  child: const Text('Reassign'),
+                  child: const Text('Delete'),
                 ),
               ),
             ],
