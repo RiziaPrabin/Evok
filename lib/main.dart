@@ -9,7 +9,8 @@ import 'worker_model.dart'; // Import the worker model
 import 'add_worker_page.dart'; // Import the add worker page
 import 'package:provider/provider.dart';
 import 'worker_provider.dart';
-
+import 'package;firebase_core/firebase_core.dart';
+import 'firebase_options.dart';
 void main() {
   runApp(
     ChangeNotifierProvider(
