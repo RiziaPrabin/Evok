@@ -1,0 +1,49 @@
+{
+  "project_info": {
+    "project_number": "180578131691",
+    "firebase_url": "https://evokfb-default-rtdb.asia-southeast1.firebasedatabase.app",
+    "project_id": "evokfb",
+    "storage_bucket": "evokfb.firebasestorage.app"
+  },
+  "client": [
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:180578131691:android:9fa6ccac2480f2fcbc68ae",
+        "android_client_info": {
+          "package_name": "com.example.evok"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfX9G14P1S_9-QPs80QuehBDmJADj9EdI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    },
+    {
+      "client_info": {
+        "mobilesdk_app_id": "1:180578131691:android:f70ccedb24aa8939bc68ae",
+        "android_client_info": {
+          "package_name": "com.example.evok_app"
+        }
+      },
+      "oauth_client": [],
+      "api_key": [
+        {
+          "current_key": "AIzaSyBfX9G14P1S_9-QPs80QuehBDmJADj9EdI"
+        }
+      ],
+      "services": {
+        "appinvite_service": {
+          "other_platform_oauth_client": []
+        }
+      }
+    }
+  ],
+  "configuration_version": "1"
+}

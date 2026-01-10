@@ -1,0 +1,3765 @@
+import 'package:flutter/material.dart';
+import 'package:path_provider/path_provider.dart';
+import 'dart:io';
+import 'dart:convert';
+import 'package:http/http.dart' as http;
+import 'package:permission_handler/permission_handler.dart';
+import 'package:flutter_sound/flutter_sound.dart';
+import 'worker_model.dart'; // Import the worker model
+import 'add_worker_page.dart'; // Import the add worker page
+import 'package:provider/provider.dart';
+import 'worker_provider.dart';
+import 'package:url_launcher/url_launcher.dart';
+import 'package:geolocator/geolocator.dart';
+import 'package:geocoding/geocoding.dart';
+import 'package:flutter/services.dart'; // For Clipboard
+import 'live_mine_map.dart';
+import 'package:firebase_database/firebase_database.dart';
+import 'package:firebase_core/firebase_core.dart';
+import 'live_tracking_page.dart';
+
+void main() async {
+  WidgetsFlutterBinding.ensureInitialized();
+  await Firebase.initializeApp();
+
+  runApp(
+    ChangeNotifierProvider(
+      create: (context) => WorkerProvider(),
+      child: const EvokApp(),
+    ),
+  );
+}
+
+class EvokApp extends StatelessWidget {
+  const EvokApp({Key? key}) : super(key: key);
+
+  @override
+  Widget build(BuildContext context) {
+    return MaterialApp(
+      title: 'EVOK',
+      theme: ThemeData(
+        brightness: Brightness.dark,
+        scaffoldBackgroundColor: const Color(0xFF0A1520),
+        primaryColor: const Color(0xFF00FF41),
+        fontFamily: 'Roboto',
+      ),
+      debugShowCheckedModeBanner: false,
+      home: const SupervisorLoginPage(),
+    );
+  }
+}
+
+// ==================== LOGIN PAGE ====================
+class SupervisorLoginPage extends StatefulWidget {
+  const SupervisorLoginPage({Key? key}) : super(key: key);
+
+  @override
+  State<SupervisorLoginPage> createState() => _SupervisorLoginPageState();
+}
+
+class _SupervisorLoginPageState extends State<SupervisorLoginPage> {
+  final TextEditingController _usernameController = TextEditingController();
+  final TextEditingController _passwordController = TextEditingController();
+  bool _obscurePassword = true;
+
+  @override
+  void dispose() {
+    _usernameController.dispose();
+    _passwordController.dispose();
+    super.dispose();
+  }
+
+  void _handleLogin() {
+    String username = _usernameController.text;
+    String password = _passwordController.text;
+
+    if (username == 'supervisor' && password == '123') {
+      Navigator.pushReplacement(
+        context,
+        MaterialPageRoute(builder: (context) => const SupervisorDashboard()),
+      );
+    } else {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Invalid credentials. Use supervisor/123'),
+          backgroundColor: Colors.red,
+        ),
+      );
+    }
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      body: SafeArea(
+        child: SingleChildScrollView(
+          child: Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 24.0),
+            child: Column(
+              children: [
+                const SizedBox(height: 60),
+                Container(
+                  width: 140,
+                  height: 140,
+                  decoration: BoxDecoration(
+                    shape: BoxShape.circle,
+                    border: Border.all(
+                      color: const Color(0xFF00FF41).withOpacity(0.3),
+                      width: 2,
+                    ),
+                  ),
+                  child: const Center(
+                    child: Icon(
+                      Icons.shield_outlined,
+                      size: 80,
+                      color: Color(0xFF00FF41),
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 24),
+                const Text(
+                  'EVOK',
+                  style: TextStyle(
+                    fontSize: 48,
+                    fontWeight: FontWeight.bold,
+                    color: Color(0xFF00FF41),
+                    letterSpacing: 8,
+                  ),
+                ),
+                const SizedBox(height: 40),
+                Container(
+                  padding: const EdgeInsets.all(28),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF0F2230),
+                    borderRadius: BorderRadius.circular(20),
+                    border: Border.all(
+                      color: const Color(0xFF00FF41).withOpacity(0.2),
+                      width: 1.5,
+                    ),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.stretch,
+                    children: [
+                      const Text(
+                        'Secure Access',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 26,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      Text(
+                        'Enter supervisor credentials to continue',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 14,
+                          color: Colors.white.withOpacity(0.6),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A3344),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _usernameController,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Supervisor Username',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.4),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.person_outline,
+                              color: Color(0xFF00FF41),
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 16),
+                      Container(
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF1A3344),
+                          borderRadius: BorderRadius.circular(12),
+                        ),
+                        child: TextField(
+                          controller: _passwordController,
+                          obscureText: _obscurePassword,
+                          style: const TextStyle(color: Colors.white),
+                          decoration: InputDecoration(
+                            hintText: 'Secure Password',
+                            hintStyle: TextStyle(
+                              color: Colors.white.withOpacity(0.4),
+                            ),
+                            prefixIcon: const Icon(
+                              Icons.lock_outline,
+                              color: Color(0xFF00FF41),
+                            ),
+                            suffixIcon: IconButton(
+                              icon: Icon(
+                                _obscurePassword
+                                    ? Icons.visibility_outlined
+                                    : Icons.visibility_off_outlined,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                              onPressed: () {
+                                setState(() {
+                                  _obscurePassword = !_obscurePassword;
+                                });
+                              },
+                            ),
+                            border: InputBorder.none,
+                            contentPadding: const EdgeInsets.symmetric(
+                              horizontal: 20,
+                              vertical: 18,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 32),
+                      ElevatedButton(
+                        onPressed: _handleLogin,
+                        style: ElevatedButton.styleFrom(
+                          backgroundColor: const Color(0xFF00FF41),
+                          foregroundColor: Colors.black,
+                          padding: const EdgeInsets.symmetric(vertical: 18),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          elevation: 0,
+                        ),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: const [
+                            Text(
+                              'Access Dashboard',
+                              style: TextStyle(
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            SizedBox(width: 8),
+                            Icon(Icons.arrow_forward, size: 20),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== MAIN DASHBOARD CONTAINER ====================
+class SupervisorDashboard extends StatefulWidget {
+  const SupervisorDashboard({Key? key}) : super(key: key);
+
+  @override
+  State<SupervisorDashboard> createState() => _SupervisorDashboardState();
+}
+
+class _SupervisorDashboardState extends State<SupervisorDashboard> {
+  int _selectedIndex = 0;
+
+  // The 5 Content Pages
+  final List<Widget> _pages = [
+    const HomeContent(),
+    const WorkerManagementContent(),
+    const SafetyAlertsContent(),
+    const CommunicationHubContent(),
+    const AnalyticsDashboardContent(),
+  ];
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      // IndexedStack preserves the state of each page when switching
+      body: IndexedStack(index: _selectedIndex, children: _pages),
+      bottomNavigationBar: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF0F2230),
+          boxShadow: [
+            BoxShadow(
+              color: Colors.black.withOpacity(0.3),
+              blurRadius: 10,
+              offset: const Offset(0, -2),
+            ),
+          ],
+        ),
+        child: BottomNavigationBar(
+          currentIndex: _selectedIndex,
+          onTap: (index) {
+            setState(() {
+              _selectedIndex = index;
+            });
+          },
+          backgroundColor: Colors.transparent,
+          type: BottomNavigationBarType.fixed,
+          selectedItemColor: const Color(0xFF00FF41),
+          unselectedItemColor: Colors.white54,
+          selectedFontSize: 12,
+          unselectedFontSize: 12,
+          elevation: 0,
+          items: const [
+            BottomNavigationBarItem(
+              icon: Icon(Icons.shield_outlined),
+              label: 'Home',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.people_outline),
+              label: 'Workers',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.warning_amber_outlined),
+              label: 'Alerts',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.chat_bubble_outline),
+              label: 'Comms',
+            ),
+            BottomNavigationBarItem(
+              icon: Icon(Icons.bar_chart),
+              label: 'Analytics',
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 1. HOME CONTENT ====================
+class HomeContent extends StatelessWidget {
+  const HomeContent({Key? key}) : super(key: key);
+  String _getDisplayName(Worker worker) {
+    if (worker.vestId == 'VEST-001') {
+      return '${worker.name} (L)';
+    } else if (worker.vestId == 'VEST-002') {
+      return '${worker.name} (W)';
+    }
+    return worker.name;
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<WorkerProvider>(
+      builder: (context, workerProvider, child) {
+        final allWorkers = workerProvider.activeWorkers;
+
+        return SafeArea(
+          child: Column(
+            children: [
+              // Header
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'EVOK Supervisor',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const Text(
+                          'Dashboard',
+                          style: TextStyle(
+                            fontSize: 20,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Real-time Worker Monitoring',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                    ElevatedButton.icon(
+                      onPressed: () {
+                        Navigator.pushReplacement(
+                          context,
+                          MaterialPageRoute(
+                            builder: (context) => const SupervisorLoginPage(),
+                          ),
+                        );
+                      },
+                      icon: const Icon(Icons.logout, size: 18),
+                      label: const Text('Logout'),
+                      style: ElevatedButton.styleFrom(
+                        backgroundColor: Colors.red,
+                        foregroundColor: Colors.white,
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 16,
+                          vertical: 10,
+                        ),
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+
+              // Content
+              Expanded(
+                child: SingleChildScrollView(
+                  padding: const EdgeInsets.all(20),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      // Stats Cards - Now using real data
+                      Row(
+                        children: [
+                          Expanded(
+                            child: _buildStatCard(
+                              'Active\nWorkers',
+                              workerProvider.activeWorkersCount.toString(),
+                              'Currently online',
+                              const Color(0xFF00FF41),
+                              Icons.people_outline,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Active\nAlerts',
+                              workerProvider.alertsCount.toString(),
+                              'Requiring attention',
+                              Colors.red,
+                              Icons.warning_amber_outlined,
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                          Expanded(
+                            child: _buildStatCard(
+                              'Offline\nWorkers',
+                              workerProvider.offlineWorkersCount.toString(),
+                              'Connection lost',
+                              Colors.grey,
+                              Icons.signal_wifi_off,
+                            ),
+                          ),
+                        ],
+                      ),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Mine Layout - Live Positions',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      _buildMineLayout(workerProvider),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Worker Status Overview',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      // Display real worker data
+                      if (allWorkers.isEmpty)
+                        Center(
+                          child: Padding(
+                            padding: const EdgeInsets.all(32.0),
+                            child: Column(
+                              children: [
+                                Icon(
+                                  Icons.people_outline,
+                                  size: 64,
+                                  color: Colors.white.withOpacity(0.3),
+                                ),
+                                const SizedBox(height: 16),
+                                Text(
+                                  'No active workers',
+                                  style: TextStyle(
+                                    fontSize: 16,
+                                    color: Colors.white.withOpacity(0.6),
+                                  ),
+                                ),
+                              ],
+                            ),
+                          ),
+                        )
+                      else
+                        ...allWorkers.map((worker) {
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 12),
+                            child: _buildWorkerCard(
+                              _getDisplayName(worker),
+                              worker.vestId,
+                              '${worker.heartRate} BPM',
+                              '${worker.temperature.toStringAsFixed(1)}°F',
+                              '${worker.spo2}% SpO₂',
+                              worker.status,
+                              worker.statusColor,
+                              worker.lastUpdated == null ? '—' : 'Live',
+                            ),
+                          );
+                        }).toList(),
+                      const SizedBox(height: 24),
+                      const Text(
+                        'Quick Actions',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      const SizedBox(height: 12),
+                      Row(
+                        children: [
+                          Expanded(
+                            child: ElevatedButton.icon(
+                              onPressed: () {},
+                              icon: const Icon(Icons.campaign),
+                              label: const Text('Emergency Broadcast'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: Colors.red,
+                                foregroundColor: Colors.white,
+                                padding: const EdgeInsets.symmetric(
+                                  vertical: 16,
+                                ),
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(12),
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(width: 12),
+                        ],
+                      ),
+                      const SizedBox(height: 20),
+                    ],
+                  ),
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildStatCard(
+    String title,
+    String value,
+    String subtitle,
+    Color color,
+    IconData icon,
+  ) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF0F2230),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: color.withOpacity(0.3), width: 1.5),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.7),
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            value,
+            style: TextStyle(
+              fontSize: 28,
+              fontWeight: FontWeight.bold,
+              color: color,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            subtitle,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.white.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMineLayout(WorkerProvider provider) {
+    return Container(
+      height: 220,
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: const LiveMineMap(), // ✅ external widget
+    );
+  }
+
+  Widget _buildWorkerDot(Color color) {
+    return Container(
+      width: 16,
+      height: 16,
+      decoration: BoxDecoration(
+        color: color,
+        shape: BoxShape.circle,
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.5),
+            blurRadius: 8,
+            spreadRadius: 2,
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildLegendItem(Color color, String label) {
+    return Row(
+      children: [
+        Container(
+          width: 10,
+          height: 10,
+          decoration: BoxDecoration(color: color, shape: BoxShape.circle),
+        ),
+        const SizedBox(width: 6),
+        Text(
+          label,
+          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildWorkerCard(
+    String name,
+    String vestId,
+    String bpm,
+    String temp,
+    String spo2,
+    String status,
+    Color statusColor,
+    String lastUpdate,
+  ) {
+    bool isOffline = status == 'OFFLINE';
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                name,
+                style: const TextStyle(
+                  fontSize: 16,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: statusColor.withOpacity(0.2),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  status,
+                  style: TextStyle(
+                    fontSize: 11,
+                    fontWeight: FontWeight.bold,
+                    color: statusColor,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 4),
+          Text(
+            'Vest ID: $vestId',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.6),
+            ),
+          ),
+          if (!isOffline) ...[
+            const SizedBox(height: 12),
+            Row(
+              children: [
+                _buildVitalSign(Icons.favorite, bpm, Colors.red),
+                const SizedBox(width: 20),
+                _buildVitalSign(Icons.thermostat, temp, Colors.orange),
+                const SizedBox(width: 20),
+                _buildVitalSign(Icons.air, spo2, Colors.blue),
+              ],
+            ),
+          ],
+          const SizedBox(height: 8),
+          Text(
+            'Last update: $lastUpdate',
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildVitalSign(IconData icon, String value, Color color) {
+    return Row(
+      children: [
+        Icon(icon, size: 16, color: color),
+        const SizedBox(width: 4),
+        Text(
+          value,
+          style: const TextStyle(
+            fontSize: 13,
+            color: Colors.white,
+            fontWeight: FontWeight.w500,
+          ),
+        ),
+      ],
+    );
+  }
+}
+
+// ==================== 2. WORKER MANAGEMENT CONTENT ====================
+// Replace the entire WorkerManagementContent class with this:
+
+// ==================== 2. WORKER MANAGEMENT CONTENT ====================
+// Replace the entire WorkerManagementContent class with this:
+class WorkerManagementContent extends StatefulWidget {
+  const WorkerManagementContent({Key? key}) : super(key: key);
+
+  @override
+  State<WorkerManagementContent> createState() =>
+      _WorkerManagementContentState();
+}
+
+class _WorkerManagementContentState extends State<WorkerManagementContent> {
+  final TextEditingController _searchController = TextEditingController();
+
+  @override
+  void initState() {
+    super.initState();
+    _searchController.addListener(() {
+      setState(() {});
+    });
+  }
+
+  @override
+  void dispose() {
+    _searchController.dispose();
+    super.dispose();
+  }
+
+  List<Worker> _getFilteredWorkers(List<Worker> workers) {
+    final query = _searchController.text.toLowerCase();
+    if (query.isEmpty) return workers;
+
+    return workers.where((w) {
+      return w.name.toLowerCase().contains(query) ||
+          w.vestId.toLowerCase().contains(query) ||
+          w.id.contains(query);
+    }).toList();
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return Consumer<WorkerProvider>(
+      builder: (context, workerProvider, child) {
+        final filteredWorkers = _getFilteredWorkers(workerProvider.workers);
+
+        return SafeArea(
+          child: Column(
+            children: [
+              Padding(
+                padding: const EdgeInsets.all(20),
+                child: Row(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  children: [
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'Worker Management',
+                          style: TextStyle(
+                            fontSize: 24,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Smart Vest Allocation & Tracking',
+                          style: TextStyle(
+                            color: Colors.white.withOpacity(0.6),
+                            fontSize: 13,
+                          ),
+                        ),
+                      ],
+                    ),
+                    Container(
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF00FF41),
+                        borderRadius: BorderRadius.circular(12),
+                      ),
+                      child: IconButton(
+                        icon: const Icon(Icons.add, color: Colors.black),
+                        onPressed: () async {
+                          final newWorker = await Navigator.push<Worker>(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => AddWorkerPage(
+                                nextWorkerId: workerProvider.getNextWorkerId(),
+                              ),
+                            ),
+                          );
+
+                          if (newWorker != null) {
+                            workerProvider.addWorker(newWorker);
+                          }
+                        },
+                      ),
+                    ),
+                  ],
+                ),
+              ),
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: TextField(
+                  controller: _searchController,
+                  style: const TextStyle(color: Colors.white),
+                  decoration: InputDecoration(
+                    hintText: 'Search workers or vest IDs...',
+                    hintStyle: TextStyle(color: Colors.white.withOpacity(0.4)),
+                    prefixIcon: const Icon(Icons.search, color: Colors.white),
+                    filled: true,
+                    fillColor: const Color(0xFF1A3344),
+                    border: OutlineInputBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      borderSide: BorderSide.none,
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(height: 20),
+              Expanded(
+                child: ListView.builder(
+                  padding: const EdgeInsets.symmetric(horizontal: 20),
+                  itemCount: filteredWorkers.length,
+                  itemBuilder: (context, index) {
+                    final worker = filteredWorkers[index];
+                    return Padding(
+                      padding: const EdgeInsets.only(bottom: 16),
+                      child: _buildWorkerDetailCard(worker: worker),
+                    );
+                  },
+                ),
+              ),
+            ],
+          ),
+        );
+      },
+    );
+  }
+
+  Widget _buildWorkerDetailCard({required Worker worker}) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                worker.name,
+                style: const TextStyle(
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                ),
+              ),
+              Text(
+                worker.status,
+                style: TextStyle(
+                  fontWeight: FontWeight.bold,
+                  color: worker.statusColor,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Text(
+            'ID: ${worker.id} • Vest: ${worker.vestId}',
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 12,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildDetailRow('Shift:', worker.shift),
+          _buildDetailRow('Department:', worker.department),
+          const SizedBox(height: 8),
+          Row(
+            children: [
+              Icon(
+                Icons.location_on,
+                size: 14,
+                color: Colors.white.withOpacity(0.6),
+              ),
+              const SizedBox(width: 6),
+              Text(
+                worker.latitude == 0
+                    ? worker.location
+                    : 'Lat: ${worker.latitude.toStringAsFixed(5)}, '
+                        'Lng: ${worker.longitude.toStringAsFixed(5)}',
+                style: TextStyle(
+                  fontSize: 13,
+                  color: Colors.white.withOpacity(0.8),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          _buildDetailRow('Assigned:', worker.assigned),
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton(
+                  onPressed: () {
+                    Navigator.push(
+                      context,
+                      MaterialPageRoute(
+                        builder: (_) => LiveTrackingPage(
+                          vestId: worker.vestId,
+                          name: worker.name,
+                        ),
+                      ),
+                    );
+                  },
+                  child: const Text('Track'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton(
+                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  onPressed: () async {
+                    final confirm = await showDialog<bool>(
+                      context: context,
+                      builder: (context) => AlertDialog(
+                        title: const Text('Delete Worker'),
+                        content: const Text(
+                            'Are you sure you want to delete this worker permanently?'),
+                        actions: [
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, false),
+                            child: const Text('Cancel'),
+                          ),
+                          TextButton(
+                            onPressed: () => Navigator.pop(context, true),
+                            child: const Text(
+                              'Delete',
+                              style: TextStyle(color: Colors.red),
+                            ),
+                          ),
+                        ],
+                      ),
+                    );
+
+                    if (confirm == true) {
+                      context.read<WorkerProvider>().removeWorker(worker.id);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Worker deleted successfully'),
+                          backgroundColor: Colors.red,
+                        ),
+                      );
+                    }
+                  },
+                  child: const Text('Delete'),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildDetailRow(String label, String value) {
+    return Row(
+      children: [
+        SizedBox(
+          width: 90,
+          child: Text(
+            label,
+            style: TextStyle(
+              color: Colors.white.withOpacity(0.6),
+              fontSize: 13,
+            ),
+          ),
+        ),
+        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+      ],
+    );
+  }
+}
+
+// ==================== 3. SAFETY ALERTS CONTENT ====================
+class SafetyAlertsContent extends StatefulWidget {
+  const SafetyAlertsContent({Key? key}) : super(key: key);
+
+  @override
+  State<SafetyAlertsContent> createState() => _SafetyAlertsContentState();
+}
+
+class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
+  String _selectedFilter = 'All';
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Safety Alerts',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Real-time Worker Safety Monitoring',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              mainAxisAlignment: MainAxisAlignment.spaceAround,
+              children: [
+                _buildStatItem('1', 'Active', Colors.red),
+                _buildStatItem('2', 'Critical', Colors.orange),
+                _buildStatItem('1', 'Resolved', const Color(0xFF00FF41)),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                _buildFilterTab('All'),
+                const SizedBox(width: 12),
+                _buildFilterTab('Active'),
+                const SizedBox(width: 12),
+                _buildFilterTab('Critical'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: ListView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              children: [
+                _buildAlertCard(
+                  type: 'BIOMETRIC ALERT',
+                  title:
+                      'Critical SpO₂ levels detected - immediate attention required',
+                  workerName: 'Sarah Chen',
+                  vestId: 'VEST-002',
+                  location: 'Tunnel B-1',
+                  time: '2 min ago',
+                  status: 'ACTIVE',
+                  statusColor: Colors.red,
+                  cardColor: Colors.red,
+                  icon: Icons.favorite,
+                  vitals: '95 BPM    99.2°F    89% SpO₂',
+                  showAcknowledge: true,
+                  showResolve: true,
+                ),
+                const SizedBox(height: 16),
+                _buildAlertCard(
+                  type: 'PANIC ALERT',
+                  title: 'Emergency panic button activated',
+                  workerName: 'Marcus Johnson',
+                  vestId: 'VEST-001',
+                  location: 'Tunnel A-2',
+                  time: '5 min ago',
+                  status: 'ACKNOWLEDGED',
+                  statusColor: Colors.orange,
+                  cardColor: Colors.red,
+                  icon: Icons.pan_tool,
+                  showResolve: true,
+                ),
+                const SizedBox(height: 16),
+                _buildAlertCard(
+                  type: 'FALL ALERT',
+                  title:
+                      'Fall detection triggered - worker may need assistance',
+                  workerName: 'David Rodriguez',
+                  vestId: 'VEST-003',
+                  location: 'Central Hub',
+                  time: '12 min ago',
+                  status: 'RESOLVED',
+                  statusColor: const Color(0xFF00FF41),
+                  cardColor: Colors.orange,
+                  icon: Icons.trending_down,
+                ),
+                const SizedBox(height: 16),
+                _buildAlertCard(
+                  type: 'ENVIRONMENTAL ALERT',
+                  title: 'High temperature zone detected',
+                  workerName: 'Emily Watson',
+                  vestId: 'VEST-004',
+                  location: 'Tunnel C-3',
+                  time: '18 min ago',
+                  status: 'ACKNOWLEDGED',
+                  statusColor: Colors.orange,
+                  cardColor: Colors.orange[800]!,
+                  icon: Icons.thermostat,
+                  vitals: '104.5°F',
+                  showResolve: true,
+                ),
+                const SizedBox(height: 20),
+              ],
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildStatItem(String value, String label, Color color) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 32,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildFilterTab(String label) {
+    bool isSelected = _selectedFilter == label;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedFilter = label;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color:
+                isSelected ? const Color(0xFF2A4A5F) : const Color(0xFF1A3344),
+            borderRadius: BorderRadius.circular(8),
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 14,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildAlertCard({
+    required String type,
+    required String title,
+    required String workerName,
+    required String vestId,
+    required String location,
+    required String time,
+    required String status,
+    required Color statusColor,
+    required Color cardColor,
+    required IconData icon,
+    String? vitals,
+    bool showAcknowledge = false,
+    bool showResolve = false,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: cardColor.withOpacity(0.9),
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(icon, color: Colors.white, size: 20),
+                  const SizedBox(width: 8),
+                  Text(
+                    type,
+                    style: const TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                      letterSpacing: 0.5,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                padding: const EdgeInsets.symmetric(
+                  horizontal: 10,
+                  vertical: 4,
+                ),
+                decoration: BoxDecoration(
+                  color: status == 'ACTIVE'
+                      ? Colors.white
+                      : status == 'ACKNOWLEDGED'
+                          ? Colors.orange[300]
+                          : const Color(0xFF00FF41),
+                  borderRadius: BorderRadius.circular(6),
+                ),
+                child: Text(
+                  status,
+                  style: const TextStyle(
+                    fontSize: 10,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.black,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Text(
+            title,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+              height: 1.3,
+            ),
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              const Icon(Icons.person, color: Colors.white70, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                '$workerName ($vestId)',
+                style: const TextStyle(fontSize: 13, color: Colors.white),
+              ),
+            ],
+          ),
+          const SizedBox(height: 6),
+          Row(
+            children: [
+              const Icon(Icons.location_on, color: Colors.white70, size: 16),
+              const SizedBox(width: 6),
+              Text(
+                location,
+                style: const TextStyle(fontSize: 13, color: Colors.white),
+              ),
+            ],
+          ),
+          if (vitals != null) ...[
+            const SizedBox(height: 8),
+            Text(
+              vitals,
+              style: const TextStyle(
+                fontSize: 13,
+                color: Colors.white,
+                fontWeight: FontWeight.w500,
+              ),
+            ),
+          ],
+          const SizedBox(height: 16),
+          Row(
+            children: [
+              const Icon(Icons.access_time, color: Colors.white70, size: 14),
+              const SizedBox(width: 4),
+              Text(
+                time,
+                style: const TextStyle(fontSize: 12, color: Colors.white70),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              if (showAcknowledge)
+                Expanded(
+                  child: ElevatedButton(
+                    onPressed: () {},
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.white.withOpacity(0.2),
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                    child: const Text('Acknowledge'),
+                  ),
+                ),
+              if (showAcknowledge && showResolve) const SizedBox(width: 8),
+              if (showResolve)
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () {},
+                    icon: const Icon(Icons.check_circle, size: 18),
+                    label: const Text('Resolve'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: const Color(0xFF00FF41),
+                      foregroundColor: Colors.black,
+                      padding: const EdgeInsets.symmetric(vertical: 10),
+                    ),
+                  ),
+                ),
+              const SizedBox(width: 8),
+              Container(
+                decoration: BoxDecoration(
+                  color: Colors.blue,
+                  borderRadius: BorderRadius.circular(8),
+                ),
+                child: IconButton(
+                  onPressed: () {},
+                  icon: const Icon(Icons.phone, color: Colors.white, size: 20),
+                  padding: const EdgeInsets.all(10),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+// ==================== 4. COMMUNICATION HUB CONTENT ====================
+class CommunicationHubContent extends StatefulWidget {
+  const CommunicationHubContent({Key? key}) : super(key: key);
+
+  @override
+  State<CommunicationHubContent> createState() =>
+      _CommunicationHubContentState();
+}
+
+class _CommunicationHubContentState extends State<CommunicationHubContent> {
+  String _selectedTab = 'Messaging';
+  final TextEditingController _messageController = TextEditingController();
+
+  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
+  bool _isRecording = false;
+  String _translatedMessage = "";
+
+  Position? _currentPosition;
+  String _currentAddress = "";
+
+  // Language selection variables
+  String selectedLangName = "Hindi";
+  String selectedLangCode = "hi";
+  String selectedVoice = "hi-IN-SwaraNeural";
+
+  // English
+  final String englishName = "English";
+  final String englishCode = "en";
+  final String englishVoice = "en-IN-NeerjaNeural";
+
+  // Hindi
+  final String hindiName = "Hindi";
+  final String hindiCode = "hi";
+  final String hindiVoice = "hi-IN-SwaraNeural";
+
+  // Tamil
+  final String tamilName = "Tamil";
+  final String tamilCode = "ta";
+  final String tamilVoice = "ta-IN-PallaviNeural";
+
+  // Malayalam
+  final String malayalamName = "Malayalam";
+  final String malayalamCode = "ml";
+  final String malayalamVoice = "ml-IN-SobhanaNeural";
+
+  // Telugu
+  final String teluguName = "Telugu";
+  final String teluguCode = "te";
+  final String teluguVoice = "te-IN-MohanNeural";
+
+  // No API key needed - using free OpenStreetMap Overpass API
+
+  @override
+  void initState() {
+    super.initState();
+    _initRecorder();
+    _getCurrentLocation();
+  }
+
+  Future<void> _initRecorder() async {
+    final status = await Permission.microphone.request();
+    if (status != PermissionStatus.granted) {
+      throw Exception('Microphone permission not granted');
+    }
+    await _recorder.openRecorder();
+  }
+
+  @override
+  void dispose() {
+    _recorder.closeRecorder();
+    _messageController.dispose();
+    super.dispose();
+  }
+
+  Future<void> _getCurrentLocation() async {
+    try {
+      LocationPermission permission = await Geolocator.checkPermission();
+      if (permission == LocationPermission.denied) {
+        permission = await Geolocator.requestPermission();
+        if (permission == LocationPermission.denied) {
+          _showSnackBar('Location permission denied');
+          return;
+        }
+      }
+
+      if (permission == LocationPermission.deniedForever) {
+        _showSnackBar('Location permissions are permanently denied');
+        return;
+      }
+
+      Position position = await Geolocator.getCurrentPosition(
+        desiredAccuracy: LocationAccuracy.high,
+      );
+
+      setState(() {
+        _currentPosition = position;
+      });
+
+      List<Placemark> placemarks = await placemarkFromCoordinates(
+        position.latitude,
+        position.longitude,
+      );
+
+      if (placemarks.isNotEmpty) {
+        Placemark place = placemarks[0];
+        setState(() {
+          _currentAddress =
+              "${place.locality}, ${place.administrativeArea}, ${place.country}";
+        });
+      }
+    } catch (e) {
+      debugPrint("Error getting location: $e");
+      _showSnackBar('Error getting location');
+    }
+  }
+
+  // Find nearest place using Overpass API (OpenStreetMap - Free, no API key needed)
+  Future<Map<String, dynamic>?> _findNearestPlace(String placeType) async {
+    if (_currentPosition == null) {
+      _showSnackBar('Location not available. Please wait...');
+      return null;
+    }
+
+    try {
+      // Show loading dialog
+      showDialog(
+        context: context,
+        barrierDismissible: false,
+        builder: (context) => Center(
+          child: Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A2F3F),
+              borderRadius: BorderRadius.circular(12),
+            ),
+            child: Column(
+              mainAxisSize: MainAxisSize.min,
+              children: [
+                CircularProgressIndicator(color: Color(0xFF00FF41)),
+                SizedBox(height: 16),
+                Text(
+                  'Finding nearest $placeType...',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ],
+            ),
+          ),
+        ),
+      );
+
+      // Overpass API query - simplified and faster with 5km radius
+      String query;
+
+      if (placeType == 'police') {
+        // Search for police with multiple possible tags
+        query = '''
+        [out:json][timeout:15];
+        (
+          node["amenity"="police"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          way["amenity"="police"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          node["office"="government"]["government"="police"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          way["office"="government"]["government"="police"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+        );
+        out center;
+        ''';
+      } else if (placeType == 'hospital') {
+        // Search for hospitals and clinics
+        query = '''
+        [out:json][timeout:15];
+        (
+          node["amenity"="hospital"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          way["amenity"="hospital"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          node["amenity"="clinic"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          way["amenity"="clinic"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+        );
+        out center;
+        ''';
+      } else if (placeType == 'fire_station') {
+        // Search for fire stations
+        query = '''
+        [out:json][timeout:15];
+        (
+          node["amenity"="fire_station"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          way["amenity"="fire_station"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+        );
+        out center;
+        ''';
+      } else {
+        query = '''
+        [out:json][timeout:15];
+        (
+          node["amenity"="$placeType"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+          way["amenity"="$placeType"](around:5000,${_currentPosition!.latitude},${_currentPosition!.longitude});
+        );
+        out center;
+        ''';
+      }
+
+      final url = Uri.parse('https://overpass-api.de/api/interpreter');
+      final response = await http.post(
+        url,
+        body: query,
+        headers: {'Content-Type': 'application/x-www-form-urlencoded'},
+      );
+
+      // Close loading dialog
+      Navigator.of(context).pop();
+
+      if (response.statusCode == 200) {
+        final data = json.decode(response.body);
+        final List<dynamic> elements = data['elements'] ?? [];
+
+        if (elements.isEmpty) {
+          _showSnackBar('No nearby $placeType found within 5km');
+
+          // Show dialog with standard emergency numbers for India
+          _showEmergencyNumbersFallback(placeType);
+          return null;
+        }
+
+        // Find the nearest one by calculating distance
+        Map<String, dynamic>? nearest;
+        double minDistance = double.infinity;
+
+        for (var element in elements) {
+          double? lat;
+          double? lon;
+
+          // Handle both nodes (with direct lat/lon) and ways (with center)
+          if (element['lat'] != null && element['lon'] != null) {
+            lat = element['lat'].toDouble();
+            lon = element['lon'].toDouble();
+          } else if (element['center'] != null) {
+            lat = element['center']['lat'].toDouble();
+            lon = element['center']['lon'].toDouble();
+          }
+
+          if (lat != null && lon != null) {
+            double distance = Geolocator.distanceBetween(
+              _currentPosition!.latitude,
+              _currentPosition!.longitude,
+              lat,
+              lon,
+            );
+
+            if (distance < minDistance) {
+              minDistance = distance;
+              nearest = {
+                'name': element['tags']?['name'] ??
+                    element['tags']?['operator'] ??
+                    'Unnamed $placeType',
+                'lat': lat,
+                'lon': lon,
+                'distance': (distance / 1000).toStringAsFixed(2), // km
+                'phone': element['tags']?['phone'] ??
+                    element['tags']?['contact:phone'] ??
+                    element['tags']?['emergency:phone'] ??
+                    'Not available',
+                'address': element['tags']?['addr:full'] ??
+                    '${element['tags']?['addr:street'] ?? ''} ${element['tags']?['addr:city'] ?? ''}'
+                        .trim(),
+              };
+            }
+          }
+        }
+
+        if (nearest == null) {
+          _showSnackBar('Could not find location details');
+          return null;
+        }
+
+        return nearest;
+      } else {
+        _showSnackBar('Error finding nearby places');
+        return null;
+      }
+    } catch (e) {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop(); // Close loading dialog
+      }
+      debugPrint("Error finding nearest place: $e");
+      _showSnackBar('Error: $e');
+      return null;
+    }
+  }
+
+  // Make phone call to nearest service
+  Future<void> _callNearestService(
+    String serviceType,
+    String serviceName,
+  ) async {
+    final placeInfo = await _findNearestPlace(serviceType);
+
+    if (placeInfo == null) {
+      return;
+    }
+
+    String phoneNumber = placeInfo['phone'];
+    bool hasPhoneNumber = phoneNumber != 'Not available';
+
+    // Show confirmation dialog with place details
+    bool? action = await showDialog<bool?>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A2F3F),
+          title: Text(
+            'Nearest $serviceName Found',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                '📍 Location:',
+                style: TextStyle(
+                  color: Color(0xFF00FF41),
+                  fontSize: 14,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+              SizedBox(height: 8),
+              Text(
+                placeInfo['name'],
+                style: TextStyle(color: Colors.white, fontSize: 14),
+              ),
+              if (placeInfo['address'].isNotEmpty) ...[
+                SizedBox(height: 6),
+                Text(
+                  placeInfo['address'],
+                  style: TextStyle(color: Colors.white60, fontSize: 11),
+                ),
+              ],
+              SizedBox(height: 12),
+              Row(
+                children: [
+                  Icon(Icons.directions, color: Color(0xFF00FF41), size: 14),
+                  SizedBox(width: 4),
+                  Text(
+                    'Distance: ${placeInfo['distance']} km',
+                    style: TextStyle(color: Colors.white70, fontSize: 12),
+                  ),
+                ],
+              ),
+              SizedBox(height: 16),
+              if (hasPhoneNumber) ...[
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF00FF41).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Color(0xFF00FF41), width: 1),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.phone, color: Color(0xFF00FF41), size: 18),
+                      SizedBox(width: 8),
+                      Expanded(
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            Text(
+                              phoneNumber,
+                              style: TextStyle(
+                                color: Color(0xFF00FF41),
+                                fontSize: 16,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                            Text(
+                              'Phone number available',
+                              style: TextStyle(
+                                color: Colors.white70,
+                                fontSize: 10,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                ),
+              ] else ...[
+                Container(
+                  padding: EdgeInsets.all(10),
+                  decoration: BoxDecoration(
+                    color: Colors.orange.withOpacity(0.2),
+                    borderRadius: BorderRadius.circular(8),
+                    border: Border.all(color: Colors.orange, width: 1),
+                  ),
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Row(
+                        children: [
+                          Icon(
+                            Icons.info_outline,
+                            color: Colors.orange,
+                            size: 16,
+                          ),
+                          SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              'Phone number not available',
+                              style: TextStyle(
+                                color: Colors.orange,
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                              ),
+                            ),
+                          ),
+                        ],
+                      ),
+                      SizedBox(height: 8),
+                      Text(
+                        'Tip: Open in Google Maps to find contact details and get directions',
+                        style: TextStyle(color: Colors.white70, fontSize: 11),
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(null),
+              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            if (hasPhoneNumber)
+              ElevatedButton.icon(
+                onPressed: () => Navigator.of(context).pop(true),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                icon: Icon(Icons.phone, size: 18),
+                label: Text('Call Now'),
+              ),
+            ElevatedButton.icon(
+              onPressed: () => Navigator.of(context).pop(false),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF00FF41),
+                foregroundColor: Colors.black,
+              ),
+              icon: Icon(Icons.map, size: 18),
+              label: Text('Open Maps'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (action == true && hasPhoneNumber) {
+      // Call the phone number
+      final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+
+      try {
+        if (await canLaunchUrl(launchUri)) {
+          await launchUrl(launchUri);
+          _showSnackBar('Calling ${placeInfo['name']}');
+        } else {
+          _showSnackBar('Could not launch phone app');
+        }
+      } catch (e) {
+        debugPrint("Error making call: $e");
+        _showSnackBar('Error: $e');
+      }
+    } else if (action == false) {
+      // Open in Google Maps
+      _openInGoogleMaps(placeInfo['lat'], placeInfo['lon'], placeInfo['name']);
+    }
+  }
+
+  // Open location in Google Maps
+  // Replace your existing _openInGoogleMaps method with this:
+
+  Future<void> _openInGoogleMaps(
+    double lat,
+    double lon,
+    String placeName,
+  ) async {
+    try {
+      // Try different URL schemes in order of preference
+
+      // 1. Try Google Maps app with coordinates
+      final Uri googleMapsApp = Uri.parse('google.navigation:q=$lat,$lon');
+
+      // 2. Try generic geo URI
+      final Uri geoUri = Uri.parse('geo:$lat,$lon?q=$lat,$lon');
+
+      // 3. Try HTTPS Google Maps URL (will open in browser or Maps app)
+      final Uri googleMapsWeb = Uri.parse(
+        'https://www.google.com/maps/search/?api=1&query=$lat,$lon',
+      );
+
+      // 4. Fallback: Open any maps app with coordinates
+      final Uri genericMaps = Uri.parse(
+        'geo:0,0?q=$lat,$lon(${Uri.encodeComponent(placeName)})',
+      );
+
+      bool launched = false;
+
+      // Try each option in sequence
+      if (await canLaunchUrl(googleMapsApp)) {
+        launched = await launchUrl(
+          googleMapsApp,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) {
+          _showSnackBar('Opening in Google Maps...');
+          return;
+        }
+      }
+
+      if (!launched && await canLaunchUrl(geoUri)) {
+        launched = await launchUrl(
+          geoUri,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) {
+          _showSnackBar('Opening in Maps...');
+          return;
+        }
+      }
+
+      if (!launched && await canLaunchUrl(googleMapsWeb)) {
+        launched = await launchUrl(
+          googleMapsWeb,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) {
+          _showSnackBar('Opening in browser...');
+          return;
+        }
+      }
+
+      if (!launched && await canLaunchUrl(genericMaps)) {
+        launched = await launchUrl(
+          genericMaps,
+          mode: LaunchMode.externalApplication,
+        );
+        if (launched) {
+          _showSnackBar('Opening in Maps...');
+          return;
+        }
+      }
+
+      // If nothing worked, show error with coordinates
+      _showSnackBar('Could not open maps. Coordinates: $lat, $lon');
+
+      // Show dialog with manual options
+      _showManualMapsDialog(lat, lon, placeName);
+    } catch (e) {
+      debugPrint("Error opening maps: $e");
+      _showSnackBar('Error opening maps');
+      _showManualMapsDialog(lat, lon, placeName);
+    }
+  }
+
+  // Add this helper method to show manual options
+  void _showManualMapsDialog(double lat, double lon, String placeName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A2F3F),
+          title: Text(
+            'Location Coordinates',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Could not open maps automatically. Here are the coordinates:',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              SizedBox(height: 16),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFF00FF41).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Color(0xFF00FF41)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      placeName,
+                      style: TextStyle(
+                        color: Color(0xFF00FF41),
+                        fontSize: 14,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 8),
+                    SelectableText(
+                      'Latitude: ${lat.toStringAsFixed(6)}',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                    SelectableText(
+                      'Longitude: ${lon.toStringAsFixed(6)}',
+                      style: TextStyle(color: Colors.white, fontSize: 12),
+                    ),
+                    SizedBox(height: 8),
+                    Text(
+                      'Copy these coordinates and paste in Google Maps',
+                      style: TextStyle(color: Colors.white60, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () {
+                // Copy coordinates to clipboard
+                Clipboard.setData(ClipboardData(text: '$lat, $lon'));
+                Navigator.of(context).pop();
+                _showSnackBar('Coordinates copied to clipboard');
+              },
+              child: Text(
+                'Copy Coordinates',
+                style: TextStyle(color: Color(0xFF00FF41)),
+              ),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF00FF41),
+                foregroundColor: Colors.black,
+              ),
+              child: Text('Close'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF1A3344),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+  // Add this method to your _CommunicationHubContentState class
+  // Place it after _openInGoogleMaps and before _activateProtocol
+
+  Future<void> _makePhoneCall(String phoneNumber, String serviceName) async {
+    bool? confirmed = await showDialog<bool>(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A2F3F),
+          title: Text(
+            'Emergency Call',
+            style: TextStyle(color: Colors.white, fontWeight: FontWeight.bold),
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Calling: $serviceName',
+                style: TextStyle(color: Colors.white, fontSize: 16),
+              ),
+              SizedBox(height: 8),
+              Text(
+                'Number: $phoneNumber',
+                style: TextStyle(color: Color(0xFF00FF41), fontSize: 14),
+              ),
+              if (_currentAddress.isNotEmpty) ...[
+                SizedBox(height: 12),
+                Text(
+                  'Your Location:',
+                  style: TextStyle(
+                    color: Colors.white70,
+                    fontSize: 12,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+                SizedBox(height: 4),
+                Text(
+                  _currentAddress,
+                  style: TextStyle(color: Colors.white70, fontSize: 12),
+                ),
+              ],
+              if (_currentPosition != null) ...[
+                SizedBox(height: 4),
+                Text(
+                  'Lat: ${_currentPosition!.latitude.toStringAsFixed(6)}, '
+                  'Long: ${_currentPosition!.longitude.toStringAsFixed(6)}',
+                  style: TextStyle(color: Colors.white54, fontSize: 11),
+                ),
+              ],
+            ],
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(false),
+              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(true),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Call Now'),
+            ),
+          ],
+        );
+      },
+    );
+
+    if (confirmed == true) {
+      final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
+
+      try {
+        if (await canLaunchUrl(launchUri)) {
+          await launchUrl(launchUri);
+          _showSnackBar('Calling $serviceName...');
+        } else {
+          _showSnackBar('Could not launch phone app');
+        }
+      } catch (e) {
+        debugPrint("Error making call: $e");
+        _showSnackBar('Error making call: $e');
+      }
+    }
+  }
+
+  // Show emergency numbers fallback when location search fails
+  void _showEmergencyNumbersFallback(String placeType) {
+    String emergencyNumber = '';
+    String serviceName = '';
+
+    if (placeType == 'police') {
+      emergencyNumber = '100';
+      serviceName = 'Police Emergency (India)';
+    } else if (placeType == 'hospital') {
+      emergencyNumber = '108';
+      serviceName = 'Ambulance Emergency (India)';
+    } else if (placeType == 'fire_station') {
+      emergencyNumber = '101';
+      serviceName = 'Fire Emergency (India)';
+    }
+
+    if (emergencyNumber.isNotEmpty) {
+      showDialog(
+        context: context,
+        builder: (BuildContext context) {
+          return AlertDialog(
+            backgroundColor: const Color(0xFF1A2F3F),
+            title: Row(
+              children: [
+                Icon(Icons.phone, color: Colors.red),
+                SizedBox(width: 8),
+                Expanded(
+                  child: Text(
+                    'Use Emergency Number',
+                    style: TextStyle(
+                      color: Colors.white,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ),
+              ],
+            ),
+            content: Column(
+              mainAxisSize: MainAxisSize.min,
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                Text(
+                  'Unable to find nearby location. Use the national emergency number instead:',
+                  style: TextStyle(color: Colors.white70, fontSize: 13),
+                ),
+                SizedBox(height: 16),
+                Container(
+                  padding: EdgeInsets.all(12),
+                  decoration: BoxDecoration(
+                    color: Color(0xFF00FF41).withOpacity(0.1),
+                    borderRadius: BorderRadius.circular(8),
+                  ),
+                  child: Row(
+                    children: [
+                      Icon(Icons.phone, color: Color(0xFF00FF41), size: 20),
+                      SizedBox(width: 12),
+                      Column(
+                        crossAxisAlignment: CrossAxisAlignment.start,
+                        children: [
+                          Text(
+                            emergencyNumber,
+                            style: TextStyle(
+                              color: Color(0xFF00FF41),
+                              fontSize: 24,
+                              fontWeight: FontWeight.bold,
+                            ),
+                          ),
+                          Text(
+                            serviceName,
+                            style: TextStyle(
+                              color: Colors.white70,
+                              fontSize: 12,
+                            ),
+                          ),
+                        ],
+                      ),
+                    ],
+                  ),
+                ),
+              ],
+            ),
+            actions: [
+              TextButton(
+                onPressed: () => Navigator.of(context).pop(),
+                child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+              ),
+              ElevatedButton(
+                onPressed: () {
+                  Navigator.of(context).pop();
+                  _makePhoneCall(emergencyNumber, serviceName);
+                },
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: Colors.red,
+                  foregroundColor: Colors.white,
+                ),
+                child: Text('Call Now'),
+              ),
+            ],
+          );
+        },
+      );
+    }
+  }
+
+  void _activateProtocol(String protocolName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A2F3F),
+          title: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.red),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Activate Protocol',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to activate:\n\n$protocolName',
+            style: TextStyle(color: Colors.white),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showSnackBar('$protocolName activated successfully');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Activate'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showLanguageSelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A2F3F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            _langTile(englishName, englishCode, englishVoice),
+            _langTile(hindiName, hindiCode, hindiVoice),
+            _langTile(tamilName, tamilCode, tamilVoice),
+            _langTile(malayalamName, malayalamCode, malayalamVoice),
+            _langTile(teluguName, teluguCode, teluguVoice),
+          ],
+        );
+      },
+    );
+  }
+
+  Widget _langTile(String name, String code, String voice) {
+    return ListTile(
+      title: Text(name, style: const TextStyle(color: Colors.white)),
+      onTap: () {
+        setState(() {
+          selectedLangName = name;
+          selectedLangCode = code;
+          selectedVoice = voice;
+        });
+        Navigator.pop(context);
+      },
+    );
+  }
+
+  Future<void> _sendAudioToBackend(String filePath) async {
+    try {
+      final uri = Uri.parse(
+        "https://evok-functions.azurewebsites.net/api/voice_pipeline",
+      );
+
+      var request = http.MultipartRequest("POST", uri);
+
+      request.files.add(await http.MultipartFile.fromPath("audio", filePath));
+
+      // 🔹 Send selected language info
+      request.fields["target_lang"] = selectedLangCode;
+      request.fields["voice"] = selectedVoice;
+
+      final response = await request.send();
+
+      if (response.statusCode == 200) {
+        final bytes = await response.stream.toBytes();
+
+        final dir = await getTemporaryDirectory();
+        final outPath = "${dir.path}/translated.wav";
+
+        final file = File(outPath);
+        await file.writeAsBytes(bytes);
+
+        // ❌ Do not autoplay (as per your design)
+        // Audio will be forwarded to ESP32 later
+
+        _showSnackBar("Voice translated successfully");
+      } else {
+        _showSnackBar("Voice pipeline failed");
+      }
+    } catch (e) {
+      debugPrint("Pipeline error: $e");
+      _showSnackBar("Error sending voice");
+    }
+  }
+
+  Future<void> _playAudio(String path) async {
+    final player = FlutterSoundPlayer();
+    await player.openPlayer();
+    await player.startPlayer(fromURI: path, codec: Codec.pcm16WAV);
+  }
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Communication Hub',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'AI-Powered Multilingual Safety Communications',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                Expanded(
+                  child: _buildTabButton(
+                    'Messaging',
+                    Icons.message,
+                    _selectedTab == 'Messaging',
+                  ),
+                ),
+                const SizedBox(width: 12),
+                Expanded(
+                  child: _buildTabButton(
+                    'Emergency',
+                    Icons.phone,
+                    _selectedTab == 'Emergency',
+                  ),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: _selectedTab == 'Messaging'
+                ? _buildMessagingContent()
+                : _buildEmergencyContent(),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildTabButton(String label, IconData icon, bool isSelected) {
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedTab = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A3344),
+          borderRadius: BorderRadius.circular(10),
+          border: isSelected && label == 'Emergency'
+              ? Border.all(color: const Color(0xFF00FF41), width: 2)
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              icon,
+              color: isSelected ? const Color(0xFF00FF41) : Colors.white54,
+              size: 20,
+            ),
+            const SizedBox(width: 8),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 14,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+                color: isSelected ? const Color(0xFF00FF41) : Colors.white54,
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  Widget _buildMessagingContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            children: [
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    _activateProtocol('Emergency Broadcast');
+                  },
+                  icon: const Icon(Icons.warning, size: 20),
+                  label: const Text('Emergency Broadcast'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                    foregroundColor: Colors.white,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: ElevatedButton.icon(
+                  onPressed: () {
+                    _activateProtocol('All-Worker Alert');
+                  },
+                  icon: const Icon(Icons.people, size: 20),
+                  label: const Text('All-Worker Alert'),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: const Color(0xFF00FF41),
+                    foregroundColor: Colors.black,
+                    padding: const EdgeInsets.symmetric(vertical: 14),
+                  ),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Send Message',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 16),
+          const Text(
+            'Recipient',
+            style: TextStyle(fontSize: 14, color: Colors.white70),
+          ),
+          const SizedBox(height: 8),
+          SingleChildScrollView(
+            scrollDirection: Axis.horizontal,
+            child: Row(
+              children: [
+                _buildRecipientChip('All Workers', true),
+                const SizedBox(width: 8),
+                _buildRecipientChip('Marcus Johnson', false),
+                const SizedBox(width: 8),
+                _buildRecipientChip('Sarah', false),
+              ],
+            ),
+          ),
+          const SizedBox(height: 16),
+          GestureDetector(
+            onTap: _showLanguageSelector,
+            child: Container(
+              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
+              decoration: BoxDecoration(
+                color: const Color(0xFF1A3344),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Row(
+                children: [
+                  Icon(Icons.language, color: Color(0xFF00FF41), size: 20),
+                  SizedBox(width: 8),
+                  Text(
+                    selectedLangName,
+                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  ),
+                  Spacer(),
+                  Icon(Icons.arrow_drop_down, color: Colors.white54),
+                ],
+              ),
+            ),
+          ),
+          const SizedBox(height: 24),
+          Center(
+            child: Column(
+              children: [
+                GestureDetector(
+                  onTapDown: (_) async {
+                    setState(() => _isRecording = true);
+
+                    final dir = await getTemporaryDirectory();
+                    final path = '${dir.path}/voice.wav';
+
+                    await _recorder.startRecorder(
+                      toFile: path,
+                      codec: Codec.pcm16WAV,
+                      sampleRate: 16000,
+                      numChannels: 1,
+                    );
+                  },
+                  onTapUp: (_) async {
+                    setState(() => _isRecording = false);
+
+                    final path = await _recorder.stopRecorder();
+                    if (path != null) {
+                      await _sendAudioToBackend(path);
+                    }
+                  },
+                  child: AnimatedContainer(
+                    duration: const Duration(milliseconds: 200),
+                    width: _isRecording ? 120 : 100,
+                    height: _isRecording ? 120 : 100,
+                    decoration: BoxDecoration(
+                      shape: BoxShape.circle,
+                      color: const Color(0xFF1A3344),
+                      boxShadow: _isRecording
+                          ? [
+                              BoxShadow(
+                                color: Colors.white.withOpacity(0.7),
+                                blurRadius: 25,
+                                spreadRadius: 6,
+                              ),
+                            ]
+                          : [],
+                    ),
+                    child: const Icon(
+                      Icons.mic,
+                      color: Color(0xFF00FF41),
+                      size: 40,
+                    ),
+                  ),
+                ),
+                const SizedBox(height: 12),
+                Text(
+                  'Hold to record voice message',
+                  style: TextStyle(fontSize: 13, color: Colors.white70),
+                ),
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A3344),
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                  child: TextField(
+                    controller: _messageController,
+                    style: const TextStyle(color: Colors.white),
+                    decoration: InputDecoration(
+                      hintText: 'Type your message here...',
+                      hintStyle: TextStyle(
+                        color: Colors.white.withOpacity(0.4),
+                      ),
+                      border: InputBorder.none,
+                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Container(
+                decoration: const BoxDecoration(
+                  color: Color(0xFF00FF41),
+                  shape: BoxShape.circle,
+                ),
+                child: IconButton(
+                  onPressed: () {
+                    if (_messageController.text.isNotEmpty) {
+                      _showSnackBar('Message sent successfully');
+                      _messageController.clear();
+                    }
+                  },
+                  icon: const Icon(Icons.send, color: Colors.black),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 24),
+          const Text(
+            'Recent Messages',
+            style: TextStyle(
+              fontSize: 18,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildMessageCard(
+            type: 'ALERT',
+            message:
+                'Emergency evacuation protocol activated. Proceed to nearest exit immediately.',
+            recipient: 'All Workers',
+            time: '2 min ago',
+            typeColor: Colors.red,
+            statusColor: Colors.green,
+          ),
+          const SizedBox(height: 12),
+          _buildMessageCard(
+            type: 'VOICE',
+            message: 'Please report to safety station for medical checkup.',
+            recipient: 'Sarah Chen',
+            time: '5 min ago',
+            typeColor: Colors.blue,
+            statusColor: Colors.orange,
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildEmergencyContent() {
+    return SingleChildScrollView(
+      padding: const EdgeInsets.symmetric(horizontal: 20),
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            decoration: BoxDecoration(
+              color: const Color(0xFF1A2F3F),
+              borderRadius: BorderRadius.circular(16),
+            ),
+            child: Column(
+              children: [
+                const Icon(Icons.shield_outlined, color: Colors.red, size: 50),
+                const SizedBox(height: 12),
+                const Text(
+                  'Emergency Response',
+                  style: TextStyle(
+                    fontSize: 22,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Quick access to emergency services',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+                if (_currentAddress.isNotEmpty) ...[
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(8),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00FF41).withOpacity(0.1),
+                      borderRadius: BorderRadius.circular(8),
+                    ),
+                    child: Row(
+                      mainAxisSize: MainAxisSize.min,
+                      children: [
+                        Icon(
+                          Icons.location_on,
+                          color: Color(0xFF00FF41),
+                          size: 16,
+                        ),
+                        SizedBox(width: 6),
+                        Flexible(
+                          child: Text(
+                            _currentAddress,
+                            style: TextStyle(
+                              fontSize: 11,
+                              color: Color(0xFF00FF41),
+                            ),
+                            textAlign: TextAlign.center,
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                ],
+              ],
+            ),
+          ),
+          const SizedBox(height: 24),
+          Row(
+            children: [
+              Expanded(
+                child: _buildEmergencyCard(
+                  '🚒',
+                  'Fire Department',
+                  'Nearest',
+                  onTap: () =>
+                      _callNearestService('fire_station', 'Fire Department'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildEmergencyCard(
+                  '👮',
+                  'Police Emergency',
+                  'Nearest',
+                  onTap: () =>
+                      _callNearestService('police', 'Police Emergency'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          Row(
+            children: [
+              Expanded(
+                child: _buildEmergencyCard(
+                  '🚑',
+                  'Medical Emergency',
+                  'Nearest',
+                  onTap: () =>
+                      _callNearestService('hospital', 'Medical Emergency'),
+                ),
+              ),
+              const SizedBox(width: 12),
+              Expanded(
+                child: _buildEmergencyCard(
+                  '🏢',
+                  'Mine Safety Office',
+                  '+1234567890',
+                  onTap: () =>
+                      _makePhoneCall('+1234567890', 'Mine Safety Office'),
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 12),
+          SizedBox(
+            width: double.infinity,
+            child: _buildEmergencyCard(
+              '🏢',
+              'Site Manager',
+              '+0987654321',
+              isFullWidth: true,
+              onTap: () => _makePhoneCall('+0987654321', 'Site Manager'),
+            ),
+          ),
+          const SizedBox(height: 24),
+          const Align(
+            alignment: Alignment.centerLeft,
+            child: Text(
+              'Emergency Protocols',
+              style: TextStyle(
+                fontSize: 18,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+          ),
+          const SizedBox(height: 12),
+          _buildProtocolCard(
+            icon: Icons.campaign,
+            iconColor: Colors.red,
+            title: 'Site-Wide Evacuation',
+            subtitle: 'Activate immediate evacuation alert',
+            onTap: () => _activateProtocol('Site-Wide Evacuation'),
+          ),
+          const SizedBox(height: 12),
+          _buildProtocolCard(
+            icon: Icons.medical_services,
+            iconColor: Colors.orange,
+            title: 'Medical Emergency Response',
+            subtitle: 'Coordinate medical assistance',
+            onTap: () => _activateProtocol('Medical Emergency Response'),
+          ),
+          const SizedBox(height: 12),
+          _buildProtocolCard(
+            icon: Icons.lock,
+            iconColor: Colors.blue,
+            title: 'Safety Lockdown',
+            subtitle: 'Secure area and halt operations',
+            onTap: () => _activateProtocol('Safety Lockdown'),
+          ),
+          const SizedBox(height: 20),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildRecipientChip(String label, bool isSelected) {
+    return Container(
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
+      decoration: BoxDecoration(
+        color: isSelected ? const Color(0xFF00FF41) : const Color(0xFF1A3344),
+        borderRadius: BorderRadius.circular(20),
+      ),
+      child: Row(
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          Icon(
+            Icons.people,
+            size: 16,
+            color: isSelected ? Colors.black : Colors.white70,
+          ),
+          const SizedBox(width: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 13,
+              color: isSelected ? Colors.black : Colors.white,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildMessageCard({
+    required String type,
+    required String message,
+    required String recipient,
+    required String time,
+    required Color typeColor,
+    required Color statusColor,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  Icon(
+                    type == 'ALERT'
+                        ? Icons.warning
+                        : type == 'VOICE'
+                            ? Icons.volume_up
+                            : Icons.message,
+                    color: typeColor,
+                    size: 16,
+                  ),
+                  const SizedBox(width: 6),
+                  Text(
+                    type,
+                    style: TextStyle(
+                      fontSize: 11,
+                      fontWeight: FontWeight.bold,
+                      color: typeColor,
+                    ),
+                  ),
+                ],
+              ),
+              Container(
+                width: 8,
+                height: 8,
+                decoration: BoxDecoration(
+                  color: statusColor,
+                  shape: BoxShape.circle,
+                ),
+              ),
+            ],
+          ),
+          const SizedBox(height: 8),
+          Text(
+            message,
+            style: const TextStyle(
+              fontSize: 13,
+              color: Colors.white,
+              height: 1.4,
+            ),
+          ),
+          const SizedBox(height: 8),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Text(
+                recipient,
+                style: const TextStyle(
+                  fontSize: 12,
+                  color: Color(0xFF00FF41),
+                  fontWeight: FontWeight.w500,
+                ),
+              ),
+              Text(
+                time,
+                style: TextStyle(
+                  fontSize: 11,
+                  color: Colors.white.withOpacity(0.5),
+                ),
+              ),
+            ],
+          ),
+        ],
+      ),
+    );
+  }
+
+  // FIXED: Added onTap parameter
+  Widget _buildEmergencyCard(
+    String emoji,
+    String title,
+    String number, {
+    bool isFullWidth = false,
+    required VoidCallback onTap,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(12),
+        border: Border.all(color: Colors.red.withOpacity(0.3), width: 2),
+      ),
+      child: Column(
+        children: [
+          Text(emoji, style: const TextStyle(fontSize: 40)),
+          const SizedBox(height: 8),
+          Text(
+            title,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 13,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            number,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.6),
+            ),
+          ),
+          const SizedBox(height: 12),
+          Container(
+            decoration: const BoxDecoration(
+              color: Colors.red,
+              shape: BoxShape.circle,
+            ),
+            child: IconButton(
+              onPressed: onTap, // FIXED: Using the onTap parameter
+              icon: const Icon(Icons.phone, color: Colors.white, size: 20),
+              padding: const EdgeInsets.all(10),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildProtocolCard({
+    required IconData icon,
+    required Color iconColor,
+    required String title,
+    required String subtitle,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        padding: const EdgeInsets.all(16),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A2F3F),
+          borderRadius: BorderRadius.circular(12),
+        ),
+        child: Row(
+          children: [
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: iconColor.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(10),
+              ),
+              child: Icon(icon, color: iconColor, size: 24),
+            ),
+            const SizedBox(width: 16),
+            Expanded(
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Text(
+                    title,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    subtitle,
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.6),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            Icon(Icons.arrow_forward_ios, color: Colors.white54, size: 16),
+          ],
+        ),
+      ),
+    );
+  }
+}
+
+// ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
+class AnalyticsDashboardContent extends StatefulWidget {
+  const AnalyticsDashboardContent({Key? key}) : super(key: key);
+
+  @override
+  State<AnalyticsDashboardContent> createState() =>
+      _AnalyticsDashboardContentState();
+}
+
+class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent> {
+  String _selectedPeriod = 'This Week';
+
+  @override
+  Widget build(BuildContext context) {
+    return SafeArea(
+      child: Column(
+        children: [
+          Container(
+            padding: const EdgeInsets.all(20),
+            child: Column(
+              crossAxisAlignment: CrossAxisAlignment.start,
+              children: [
+                const Text(
+                  'Analytics Dashboard',
+                  style: TextStyle(
+                    fontSize: 24,
+                    fontWeight: FontWeight.bold,
+                    color: Colors.white,
+                  ),
+                ),
+                const SizedBox(height: 4),
+                Text(
+                  'Worker Health & Safety Insights',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+              ],
+            ),
+          ),
+          Padding(
+            padding: const EdgeInsets.symmetric(horizontal: 20),
+            child: Row(
+              children: [
+                _buildPeriodTab('This Week'),
+                const SizedBox(width: 8),
+                _buildPeriodTab('This Month'),
+                const SizedBox(width: 8),
+                _buildPeriodTab('This Quarter'),
+              ],
+            ),
+          ),
+          const SizedBox(height: 20),
+          Expanded(
+            child: SingleChildScrollView(
+              padding: const EdgeInsets.symmetric(horizontal: 20),
+              child: Column(
+                crossAxisAlignment: CrossAxisAlignment.start,
+                children: [
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          icon: Icons.warning,
+                          value: '0',
+                          label: 'Safety Incidents',
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          icon: Icons.access_time,
+                          value: '290',
+                          label: 'Work Hours',
+                          color: const Color(0xFF00FF41),
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildStatCard(
+                          icon: Icons.favorite,
+                          value: '76',
+                          label: 'Avg Heart Rate',
+                          color: Colors.blue,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildStatCard(
+                          icon: Icons.stars,
+                          value: '2',
+                          label: 'Alerts Resolved',
+                          color: Colors.purple,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Biometric Trends',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 12,
+                          vertical: 6,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFF00FF41),
+                          borderRadius: BorderRadius.circular(6),
+                        ),
+                        child: Row(
+                          children: const [
+                            Icon(Icons.download, size: 14, color: Colors.black),
+                            SizedBox(width: 4),
+                            Text(
+                              'Export',
+                              style: TextStyle(
+                                fontSize: 12,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.black,
+                              ),
+                            ),
+                          ],
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Row(
+                    children: [
+                      Expanded(
+                        child: _buildBiometricCard(
+                          icon: Icons.favorite,
+                          value: '76 BPM',
+                          label: 'Heart Rate',
+                          subLabel: 'Avg',
+                          color: Colors.red,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildBiometricCard(
+                          icon: Icons.thermostat,
+                          value: '98.4°F',
+                          label: 'Temperature',
+                          subLabel: 'Avg',
+                          color: Colors.orange,
+                        ),
+                      ),
+                      const SizedBox(width: 12),
+                      Expanded(
+                        child: _buildBiometricCard(
+                          icon: Icons.air,
+                          value: '98%',
+                          label: 'SpO₂',
+                          subLabel: 'Avg',
+                          color: Colors.blue,
+                        ),
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Worker Health Scores',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 4),
+                  Text(
+                    'Individual health monitoring and trends',
+                    style: TextStyle(
+                      fontSize: 12,
+                      color: Colors.white.withOpacity(0.6),
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildHealthScoreCard(
+                    name: 'Marcus Johnson',
+                    score: 92,
+                    status: 'Excellent',
+                    statusColor: const Color(0xFF00FF41),
+                    progress: 0.92,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildHealthScoreCard(
+                    name: 'Sarah Chen',
+                    score: 78,
+                    status: 'Good',
+                    statusColor: Colors.orange,
+                    progress: 0.78,
+                    warning: 'Low SpO₂, Elevated heart rate',
+                  ),
+                  const SizedBox(height: 12),
+                  _buildHealthScoreCard(
+                    name: 'David Rodriguez',
+                    score: 88,
+                    status: 'Good',
+                    statusColor: Colors.orange,
+                    progress: 0.88,
+                  ),
+                  const SizedBox(height: 12),
+                  _buildHealthScoreCard(
+                    name: 'Emily Watson',
+                    score: 85,
+                    status: 'Good',
+                    statusColor: const Color(0xFF00FF41),
+                    progress: 0.85,
+                  ),
+                  const SizedBox(height: 24),
+                  const Text(
+                    'Incident Analysis',
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A2F3F),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceAround,
+                      children: [
+                        _buildIncidentStat(
+                          '12',
+                          'Total Incidents',
+                          'This Month',
+                          Colors.white,
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                        _buildIncidentStat(
+                          '-25%',
+                          'Month-over-Month',
+                          'Improvement',
+                          const Color(0xFF00FF41),
+                        ),
+                        Container(
+                          width: 1,
+                          height: 40,
+                          color: Colors.white.withOpacity(0.2),
+                        ),
+                        _buildIncidentStat(
+                          '2.1',
+                          'Incidents per',
+                          'Milestone',
+                          Colors.orange,
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Incident Types',
+                    style: TextStyle(
+                      fontSize: 16,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                  const SizedBox(height: 12),
+                  _buildIncidentTypeBar(
+                    'Biometric Alerts (7)',
+                    Colors.red,
+                    0.7,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildIncidentTypeBar(
+                    'Fall Detection (3)',
+                    Colors.orange,
+                    0.3,
+                  ),
+                  const SizedBox(height: 8),
+                  _buildIncidentTypeBar('Panic Button (2)', Colors.yellow, 0.2),
+                  const SizedBox(height: 24),
+                  Row(
+                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                    children: [
+                      const Text(
+                        'Historical Trends',
+                        style: TextStyle(
+                          fontSize: 18,
+                          fontWeight: FontWeight.bold,
+                          color: Colors.white,
+                        ),
+                      ),
+                      Icon(
+                        Icons.filter_list,
+                        color: Colors.white.withOpacity(0.6),
+                        size: 20,
+                      ),
+                    ],
+                  ),
+                  const SizedBox(height: 12),
+                  Container(
+                    height: 180,
+                    padding: const EdgeInsets.all(16),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF1A2F3F),
+                      borderRadius: BorderRadius.circular(12),
+                    ),
+                    child: Column(
+                      children: [
+                        Expanded(
+                          child: Row(
+                            crossAxisAlignment: CrossAxisAlignment.end,
+                            mainAxisAlignment: MainAxisAlignment.spaceAround,
+                            children: [
+                              _buildBarChart('Week 1', 2, 6, Colors.red),
+                              _buildBarChart('Week 2', 1, 6, Colors.red),
+                              _buildBarChart('Week 3', 5, 6, Colors.red),
+                              _buildBarChart('Week 4', 0, 6, Colors.grey),
+                            ],
+                          ),
+                        ),
+                        const SizedBox(height: 8),
+                        Text(
+                          'Incidents per week',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white.withOpacity(0.5),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ),
+                  const SizedBox(height: 20),
+                ],
+              ),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildPeriodTab(String label) {
+    bool isSelected = _selectedPeriod == label;
+    return Expanded(
+      child: GestureDetector(
+        onTap: () {
+          setState(() {
+            _selectedPeriod = label;
+          });
+        },
+        child: Container(
+          padding: const EdgeInsets.symmetric(vertical: 10),
+          decoration: BoxDecoration(
+            color:
+                isSelected ? const Color(0xFF1A3344) : const Color(0xFF0F1E2A),
+            borderRadius: BorderRadius.circular(8),
+            border: isSelected
+                ? Border.all(color: const Color(0xFF00FF41), width: 2)
+                : null,
+          ),
+          child: Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 12,
+              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
+              color: isSelected ? const Color(0xFF00FF41) : Colors.white54,
+            ),
+          ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildStatCard({
+    required IconData icon,
+    required String value,
+    required String label,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(20),
+      decoration: BoxDecoration(
+        color: color,
+        borderRadius: BorderRadius.circular(16),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: Colors.white, size: 28),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 32,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: const TextStyle(fontSize: 12, color: Colors.white),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildBiometricCard({
+    required IconData icon,
+    required String value,
+    required String label,
+    required String subLabel,
+    required Color color,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(12),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 24),
+          const SizedBox(height: 8),
+          Text(
+            value,
+            style: const TextStyle(
+              fontSize: 16,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
+            ),
+          ),
+          const SizedBox(height: 4),
+          Text(
+            label,
+            textAlign: TextAlign.center,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.7),
+            ),
+          ),
+          Text(
+            subLabel,
+            style: TextStyle(
+              fontSize: 10,
+              color: Colors.white.withOpacity(0.5),
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildHealthScoreCard({
+    required String name,
+    required int score,
+    required String status,
+    required Color statusColor,
+    required double progress,
+    String? warning,
+  }) {
+    return Container(
+      padding: const EdgeInsets.all(16),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(12),
+      ),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        children: [
+          Row(
+            mainAxisAlignment: MainAxisAlignment.spaceBetween,
+            children: [
+              Row(
+                children: [
+                  const Icon(Icons.person, color: Colors.white70, size: 16),
+                  const SizedBox(width: 8),
+                  Text(
+                    name,
+                    style: const TextStyle(
+                      fontSize: 15,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white,
+                    ),
+                  ),
+                ],
+              ),
+              Row(
+                children: [
+                  Text(
+                    score.toString(),
+                    style: TextStyle(
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: statusColor,
+                    ),
+                  ),
+                  const SizedBox(width: 4),
+                  Icon(Icons.trending_up, color: statusColor, size: 16),
+                ],
+              ),
+            ],
+          ),
+          if (warning != null) ...[
+            const SizedBox(height: 6),
+            Row(
+              children: [
+                const Icon(Icons.warning, color: Colors.orange, size: 12),
+                const SizedBox(width: 4),
+                Text(
+                  warning,
+                  style: const TextStyle(fontSize: 11, color: Colors.orange),
+                ),
+              ],
+            ),
+          ],
+          const SizedBox(height: 10),
+          ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: progress,
+              backgroundColor: Colors.white.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
+              minHeight: 8,
+            ),
+          ),
+        ],
+      ),
+    );
+  }
+
+  Widget _buildIncidentStat(
+    String value,
+    String label,
+    String sublabel,
+    Color color,
+  ) {
+    return Column(
+      children: [
+        Text(
+          value,
+          style: TextStyle(
+            fontSize: 24,
+            fontWeight: FontWeight.bold,
+            color: color,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Text(
+          label,
+          textAlign: TextAlign.center,
+          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
+        ),
+        Text(
+          sublabel,
+          style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.5)),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildIncidentTypeBar(String label, Color color, double value) {
+    return Row(
+      children: [
+        Expanded(
+          flex: 3,
+          child: ClipRRect(
+            borderRadius: BorderRadius.circular(4),
+            child: LinearProgressIndicator(
+              value: value,
+              backgroundColor: Colors.white.withOpacity(0.1),
+              valueColor: AlwaysStoppedAnimation<Color>(color),
+              minHeight: 8,
+            ),
+          ),
+        ),
+        const SizedBox(width: 12),
+        Expanded(
+          flex: 2,
+          child: Text(
+            label,
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.8),
+            ),
+          ),
+        ),
+      ],
+    );
+  }
+
+  Widget _buildBarChart(String label, int value, int maxValue, Color color) {
+    double heightRatio = value / maxValue;
+    return Column(
+      mainAxisAlignment: MainAxisAlignment.end,
+      children: [
+        Text(
+          value.toString(),
+          style: const TextStyle(
+            fontSize: 11,
+            color: Colors.white,
+            fontWeight: FontWeight.bold,
+          ),
+        ),
+        const SizedBox(height: 4),
+        Container(
+          width: 40,
+          height: 80 * heightRatio,
+          decoration: BoxDecoration(
+            color: color,
+            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
+          ),
+        ),
+        const SizedBox(height: 6),
+        Text(
+          label,
+          style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6)),
+        ),
+      ],
+    );
+  }
+}
+
+// ==================== HELPER CLASSES ====================
+class GridPainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final paint = Paint()
+      ..color = Colors.white.withOpacity(0.1)
+      ..strokeWidth = 1;
+
+    for (int i = 0; i <= 4; i++) {
+      double x = size.width * i / 4;
+      canvas.drawLine(Offset(x, 0), Offset(x, size.height), paint);
+    }
+
+    for (int i = 0; i <= 3; i++) {
+      double y = size.height * i / 3;
+      canvas.drawLine(Offset(0, y), Offset(size.width, y), paint);
+    }
+    canvas.drawLine(Offset(0, size.height), Offset(size.width, 0), paint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}
