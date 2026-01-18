@@ -17,6 +17,7 @@ import 'live_mine_map.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'live_tracking_page.dart';
+import 'dart:math' as math;
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -3097,6 +3098,8 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
 }
 
 // ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
+
+// ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
 class AnalyticsDashboardContent extends StatefulWidget {
   const AnalyticsDashboardContent({Key? key}) : super(key: key);
 
@@ -3105,21 +3108,52 @@ class AnalyticsDashboardContent extends StatefulWidget {
       _AnalyticsDashboardContentState();
 }
 
-class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent> {
-  String _selectedPeriod = 'This Week';
+class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
+    with SingleTickerProviderStateMixin {
+  String? selectedVestId;
+
+  late AnimationController _rotationController;
+  late Animation<double> _rotation;
+  @override
+  void initState() {
+    super.initState();
+
+    _rotationController =
+        AnimationController(vsync: this, duration: const Duration(seconds: 12))
+          ..repeat();
+
+    _rotation =
+        Tween<double>(begin: 0, end: 2 * 3.1416).animate(_rotationController);
+  }
+
+  @override
+  void dispose() {
+    _rotationController.dispose();
+    super.dispose();
+  }
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Container(
+    return Consumer<WorkerProvider>(
+      builder: (context, provider, _) {
+        final workers = provider.workers;
+
+        final selectedWorker = selectedVestId == null
+            ? null
+            : workers.firstWhere(
+                (w) => w.vestId == selectedVestId,
+                orElse: () => workers.first,
+              );
+
+        return SafeArea(
+          child: SingleChildScrollView(
             padding: const EdgeInsets.all(20),
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
+                /// ===== TITLE =====
                 const Text(
-                  'Analytics Dashboard',
+                  'Worker Detailed View',
                   style: TextStyle(
                     fontSize: 24,
                     fontWeight: FontWeight.bold,
@@ -3128,209 +3162,130 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent> {
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Worker Health & Safety Insights',
+                  'Live Worker Visualization & Vitals',
                   style: TextStyle(
                     fontSize: 13,
                     color: Colors.white.withOpacity(0.6),
                   ),
                 ),
-              ],
-            ),
-          ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                _buildPeriodTab('This Week'),
-                const SizedBox(width: 8),
-                _buildPeriodTab('This Month'),
-                const SizedBox(width: 8),
-                _buildPeriodTab('This Quarter'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: SingleChildScrollView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.warning,
-                          value: '0',
-                          label: 'Safety Incidents',
-                          color: Colors.red,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.access_time,
-                          value: '290',
-                          label: 'Work Hours',
-                          color: const Color(0xFF00FF41),
-                        ),
-                      ),
-                    ],
+
+                const SizedBox(height: 20),
+
+                /// ===== DROPDOWN =====
+                Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A3344),
+                    borderRadius: BorderRadius.circular(12),
                   ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.favorite,
-                          value: '76',
-                          label: 'Avg Heart Rate',
-                          color: Colors.blue,
-                        ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      dropdownColor: const Color(0xFF1A3344),
+                      hint: const Text(
+                        'Select Worker',
+                        style: TextStyle(color: Colors.white70),
                       ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildStatCard(
-                          icon: Icons.stars,
-                          value: '2',
-                          label: 'Alerts Resolved',
-                          color: Colors.purple,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Biometric Trends',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
-                      ),
-                      Container(
-                        padding: const EdgeInsets.symmetric(
-                          horizontal: 12,
-                          vertical: 6,
-                        ),
-                        decoration: BoxDecoration(
-                          color: const Color(0xFF00FF41),
-                          borderRadius: BorderRadius.circular(6),
-                        ),
-                        child: Row(
-                          children: const [
-                            Icon(Icons.download, size: 14, color: Colors.black),
-                            SizedBox(width: 4),
-                            Text(
-                              'Export',
-                              style: TextStyle(
-                                fontSize: 12,
-                                fontWeight: FontWeight.bold,
-                                color: Colors.black,
-                              ),
-                            ),
-                          ],
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
-                  Row(
-                    children: [
-                      Expanded(
-                        child: _buildBiometricCard(
-                          icon: Icons.favorite,
-                          value: '76 BPM',
-                          label: 'Heart Rate',
-                          subLabel: 'Avg',
-                          color: Colors.red,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildBiometricCard(
-                          icon: Icons.thermostat,
-                          value: '98.4°F',
-                          label: 'Temperature',
-                          subLabel: 'Avg',
-                          color: Colors.orange,
-                        ),
-                      ),
-                      const SizedBox(width: 12),
-                      Expanded(
-                        child: _buildBiometricCard(
-                          icon: Icons.air,
-                          value: '98%',
-                          label: 'SpO₂',
-                          subLabel: 'Avg',
-                          color: Colors.blue,
-                        ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Worker Health Scores',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+                      value: selectedVestId,
+                      isExpanded: true,
+                      items: workers.map((w) {
+                        return DropdownMenuItem(
+                          value: w.vestId,
+                          child: Text(
+                            "${w.name} (${w.vestId})",
+                            style: const TextStyle(color: Colors.white),
+                          ),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        setState(() {
+                          selectedVestId = val;
+                        });
+                      },
                     ),
                   ),
-                  const SizedBox(height: 4),
-                  Text(
-                    'Individual health monitoring and trends',
-                    style: TextStyle(
-                      fontSize: 12,
-                      color: Colors.white.withOpacity(0.6),
+                ),
+
+                const SizedBox(height: 24),
+
+                if (selectedWorker == null)
+                  Center(
+                    child: Text(
+                      "Select a worker to view details",
+                      style: TextStyle(color: Colors.white.withOpacity(0.6)),
+                    ),
+                  )
+                else ...[
+                  /// ===== ROTATING IMAGE =====
+                  AnimatedBuilder(
+                    animation: _rotationController,
+                    builder: (context, child) {
+                      final angle = _rotationController.value * 2 * math.pi;
+
+                      return Center(
+                        child: Transform.translate(
+                          offset: const Offset(0,
+                              -10), // 🔥 move slightly upward (adjust if needed)
+                          child: Transform(
+                            alignment: Alignment.center,
+                            transform: Matrix4.identity()
+                              ..setEntry(3, 2, 0.0005)
+                              ..rotateY(angle),
+                            child: child,
+                          ),
+                        ),
+                      );
+                    },
+                    child: Image.asset(
+                      selectedWorker.name.contains("Marcus")
+                          ? "assets/workers/marcus.png"
+                          : "assets/workers/sarah.png",
+                      height: 230,
+                      fit: BoxFit.contain,
                     ),
                   ),
-                  const SizedBox(height: 12),
-                  _buildHealthScoreCard(
-                    name: 'Marcus Johnson',
-                    score: 92,
-                    status: 'Excellent',
-                    statusColor: const Color(0xFF00FF41),
-                    progress: 0.92,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildHealthScoreCard(
-                    name: 'Sarah Chen',
-                    score: 78,
-                    status: 'Good',
-                    statusColor: Colors.orange,
-                    progress: 0.78,
-                    warning: 'Low SpO₂, Elevated heart rate',
-                  ),
-                  const SizedBox(height: 12),
-                  _buildHealthScoreCard(
-                    name: 'David Rodriguez',
-                    score: 88,
-                    status: 'Good',
-                    statusColor: Colors.orange,
-                    progress: 0.88,
-                  ),
-                  const SizedBox(height: 12),
-                  _buildHealthScoreCard(
-                    name: 'Emily Watson',
-                    score: 85,
-                    status: 'Good',
-                    statusColor: const Color(0xFF00FF41),
-                    progress: 0.85,
-                  ),
-                  const SizedBox(height: 24),
-                  const Text(
-                    'Incident Analysis',
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
+
+                  /// ===== VITAL CARDS =====
+                  Padding(
+                    padding: const EdgeInsets.only(top: 16),
+                    child: GridView.count(
+                      crossAxisCount: 3,
+                      shrinkWrap: true,
+                      physics: const NeverScrollableScrollPhysics(),
+                      crossAxisSpacing: 14,
+                      mainAxisSpacing: 14,
+                      children: [
+                        _buildVitalCard(
+                            Icons.favorite,
+                            "${selectedWorker.heartRate} BPM",
+                            "Heart Rate",
+                            Colors.red),
+                        _buildVitalCard(
+                            Icons.thermostat,
+                            "${selectedWorker.temperature.toStringAsFixed(1)} °F",
+                            "Temperature",
+                            Colors.orange),
+                        _buildVitalCard(Icons.air, "${selectedWorker.spo2} %",
+                            "SpO₂", Colors.blue),
+                        _buildVitalCard(
+                            Icons.bloodtype,
+                            "${selectedWorker.oxygenRate}",
+                            "Oxygen",
+                            Colors.cyan),
+                        _buildVitalCard(
+                            Icons.cloud,
+                            "${selectedWorker.gasRate} ppm",
+                            "Gas Level",
+                            Colors.green),
+                        _buildVitalCard(
+                            Icons.screen_rotation,
+                            selectedWorker.accelX.toStringAsFixed(2),
+                            "Accel-X",
+                            Colors.purple),
+                      ],
                     ),
                   ),
-                  const SizedBox(height: 12),
+
+                  /// ===== LOCATION =====
                   Container(
                     padding: const EdgeInsets.all(16),
                     decoration: BoxDecoration(
@@ -3338,404 +3293,85 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent> {
                       borderRadius: BorderRadius.circular(12),
                     ),
                     child: Row(
-                      mainAxisAlignment: MainAxisAlignment.spaceAround,
                       children: [
-                        _buildIncidentStat(
-                          '12',
-                          'Total Incidents',
-                          'This Month',
-                          Colors.white,
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.white.withOpacity(0.2),
-                        ),
-                        _buildIncidentStat(
-                          '-25%',
-                          'Month-over-Month',
-                          'Improvement',
-                          const Color(0xFF00FF41),
-                        ),
-                        Container(
-                          width: 1,
-                          height: 40,
-                          color: Colors.white.withOpacity(0.2),
-                        ),
-                        _buildIncidentStat(
-                          '2.1',
-                          'Incidents per',
-                          'Milestone',
-                          Colors.orange,
+                        const Icon(Icons.location_on, color: Colors.white70),
+                        const SizedBox(width: 8),
+                        Expanded(
+                          child: Text(
+                            selectedWorker.latitude == 0
+                                ? selectedWorker.location
+                                : "Lat: ${selectedWorker.latitude.toStringAsFixed(5)}, "
+                                    "Lng: ${selectedWorker.longitude.toStringAsFixed(5)}",
+                            style: const TextStyle(color: Colors.white),
+                          ),
                         ),
                       ],
                     ),
                   ),
+
                   const SizedBox(height: 16),
-                  const Text(
-                    'Incident Types',
-                    style: TextStyle(
-                      fontSize: 16,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                  const SizedBox(height: 12),
-                  _buildIncidentTypeBar(
-                    'Biometric Alerts (7)',
-                    Colors.red,
-                    0.7,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildIncidentTypeBar(
-                    'Fall Detection (3)',
-                    Colors.orange,
-                    0.3,
-                  ),
-                  const SizedBox(height: 8),
-                  _buildIncidentTypeBar('Panic Button (2)', Colors.yellow, 0.2),
-                  const SizedBox(height: 24),
+
+                  /// ===== STATUS =====
                   Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
                     children: [
                       const Text(
-                        'Historical Trends',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: Colors.white,
-                        ),
+                        "Status: ",
+                        style: TextStyle(color: Colors.white70),
                       ),
-                      Icon(
-                        Icons.filter_list,
-                        color: Colors.white.withOpacity(0.6),
-                        size: 20,
+                      Text(
+                        selectedWorker.status,
+                        style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: selectedWorker.statusColor,
+                        ),
                       ),
                     ],
                   ),
-                  const SizedBox(height: 12),
-                  Container(
-                    height: 180,
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A2F3F),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Column(
-                      children: [
-                        Expanded(
-                          child: Row(
-                            crossAxisAlignment: CrossAxisAlignment.end,
-                            mainAxisAlignment: MainAxisAlignment.spaceAround,
-                            children: [
-                              _buildBarChart('Week 1', 2, 6, Colors.red),
-                              _buildBarChart('Week 2', 1, 6, Colors.red),
-                              _buildBarChart('Week 3', 5, 6, Colors.red),
-                              _buildBarChart('Week 4', 0, 6, Colors.grey),
-                            ],
-                          ),
-                        ),
-                        const SizedBox(height: 8),
-                        Text(
-                          'Incidents per week',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.white.withOpacity(0.5),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  const SizedBox(height: 20),
                 ],
-              ),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildPeriodTab(String label) {
-    bool isSelected = _selectedPeriod == label;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedPeriod = label;
-          });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color:
-                isSelected ? const Color(0xFF1A3344) : const Color(0xFF0F1E2A),
-            borderRadius: BorderRadius.circular(8),
-            border: isSelected
-                ? Border.all(color: const Color(0xFF00FF41), width: 2)
-                : null,
-          ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 12,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? const Color(0xFF00FF41) : Colors.white54,
-            ),
-          ),
-        ),
-      ),
-    );
-  }
-
-  Widget _buildStatCard({
-    required IconData icon,
-    required String value,
-    required String label,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(20),
-      decoration: BoxDecoration(
-        color: color,
-        borderRadius: BorderRadius.circular(16),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: Colors.white, size: 28),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 32,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: const TextStyle(fontSize: 12, color: Colors.white),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildBiometricCard({
-    required IconData icon,
-    required String value,
-    required String label,
-    required String subLabel,
-    required Color color,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(12),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2F3F),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        children: [
-          Icon(icon, color: color, size: 24),
-          const SizedBox(height: 8),
-          Text(
-            value,
-            style: const TextStyle(
-              fontSize: 16,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 4),
-          Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.white.withOpacity(0.7),
-            ),
-          ),
-          Text(
-            subLabel,
-            style: TextStyle(
-              fontSize: 10,
-              color: Colors.white.withOpacity(0.5),
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildHealthScoreCard({
-    required String name,
-    required int score,
-    required String status,
-    required Color statusColor,
-    required double progress,
-    String? warning,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2F3F),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  const Icon(Icons.person, color: Colors.white70, size: 16),
-                  const SizedBox(width: 8),
-                  Text(
-                    name,
-                    style: const TextStyle(
-                      fontSize: 15,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                    ),
-                  ),
-                ],
-              ),
-              Row(
-                children: [
-                  Text(
-                    score.toString(),
-                    style: TextStyle(
-                      fontSize: 18,
-                      fontWeight: FontWeight.bold,
-                      color: statusColor,
-                    ),
-                  ),
-                  const SizedBox(width: 4),
-                  Icon(Icons.trending_up, color: statusColor, size: 16),
-                ],
-              ),
-            ],
-          ),
-          if (warning != null) ...[
-            const SizedBox(height: 6),
-            Row(
-              children: [
-                const Icon(Icons.warning, color: Colors.orange, size: 12),
-                const SizedBox(width: 4),
-                Text(
-                  warning,
-                  style: const TextStyle(fontSize: 11, color: Colors.orange),
-                ),
               ],
             ),
-          ],
-          const SizedBox(height: 10),
-          ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: progress,
-              backgroundColor: Colors.white.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(statusColor),
-              minHeight: 8,
-            ),
           ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildIncidentStat(
+  Widget _buildVitalCard(
+    IconData icon,
     String value,
     String label,
-    String sublabel,
     Color color,
   ) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 24,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
+    return Expanded(
+      child: Container(
+        padding: const EdgeInsets.all(12),
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A2F3F),
+          borderRadius: BorderRadius.circular(12),
         ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          textAlign: TextAlign.center,
-          style: TextStyle(fontSize: 11, color: Colors.white.withOpacity(0.7)),
-        ),
-        Text(
-          sublabel,
-          style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.5)),
-        ),
-      ],
-    );
-  }
-
-  Widget _buildIncidentTypeBar(String label, Color color, double value) {
-    return Row(
-      children: [
-        Expanded(
-          flex: 3,
-          child: ClipRRect(
-            borderRadius: BorderRadius.circular(4),
-            child: LinearProgressIndicator(
-              value: value,
-              backgroundColor: Colors.white.withOpacity(0.1),
-              valueColor: AlwaysStoppedAnimation<Color>(color),
-              minHeight: 8,
+        child: Column(
+          children: [
+            Icon(icon, color: color, size: 24),
+            const SizedBox(height: 8),
+            Text(
+              value,
+              style: const TextStyle(
+                fontSize: 15,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
             ),
-          ),
-        ),
-        const SizedBox(width: 12),
-        Expanded(
-          flex: 2,
-          child: Text(
-            label,
-            style: TextStyle(
-              fontSize: 12,
-              color: Colors.white.withOpacity(0.8),
+            const SizedBox(height: 4),
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 11,
+                color: Colors.white.withOpacity(0.6),
+              ),
             ),
-          ),
+          ],
         ),
-      ],
-    );
-  }
-
-  Widget _buildBarChart(String label, int value, int maxValue, Color color) {
-    double heightRatio = value / maxValue;
-    return Column(
-      mainAxisAlignment: MainAxisAlignment.end,
-      children: [
-        Text(
-          value.toString(),
-          style: const TextStyle(
-            fontSize: 11,
-            color: Colors.white,
-            fontWeight: FontWeight.bold,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Container(
-          width: 40,
-          height: 80 * heightRatio,
-          decoration: BoxDecoration(
-            color: color,
-            borderRadius: const BorderRadius.vertical(top: Radius.circular(4)),
-          ),
-        ),
-        const SizedBox(height: 6),
-        Text(
-          label,
-          style: TextStyle(fontSize: 10, color: Colors.white.withOpacity(0.6)),
-        ),
-      ],
+      ),
     );
   }
 }

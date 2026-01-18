@@ -59,11 +59,14 @@ class WorkerProvider extends ChangeNotifier {
       _updateWorker(
         vestId: "VEST-001",
         bpm: data['BPM'] ?? 0,
-        temp: (data['Temp'] as num).toDouble(),
+        temp: (data['Temp'] ?? 0).toDouble(),
         spo2: data['SpO2'] ?? 0,
         panic: data['Panic'] ?? 0,
-        lat: (data['Lat'] as num).toDouble(),
-        lng: (data['Lng'] as num).toDouble(),
+        lat: (data['Lat'] ?? 0).toDouble(),
+        lng: (data['Lng'] ?? 0).toDouble(),
+        gas: data['Gas'] ?? 0,
+        accelX: (data['AcceLX'] ?? 0).toDouble(),
+        oxygenRate: data['O2'] ?? 0,
       );
     });
   }
@@ -78,11 +81,14 @@ class WorkerProvider extends ChangeNotifier {
       _updateWorker(
         vestId: "VEST-002",
         bpm: data['BPM'] ?? 0,
-        temp: (data['Temp'] as num).toDouble(),
+        temp: (data['Temp'] ?? 0).toDouble(),
         spo2: data['SpO2'] ?? 0,
         panic: data['Panic'] ?? 0,
-        lat: (data['Lat'] as num).toDouble(),
-        lng: (data['Lng'] as num).toDouble(),
+        lat: (data['Lat'] ?? 0).toDouble(),
+        lng: (data['Lng'] ?? 0).toDouble(),
+        gas: data['Gas'] ?? 0,
+        accelX: (data['AcceLX'] ?? 0).toDouble(),
+        oxygenRate: data['O2'] ?? 0,
       );
     });
   }
@@ -96,6 +102,9 @@ class WorkerProvider extends ChangeNotifier {
     required int panic,
     required double lat,
     required double lng,
+    required int gas,
+    required double accelX,
+    required int oxygenRate,
   }) {
     final index = _workers.indexWhere((w) => w.vestId == vestId);
     if (index == -1) return;
@@ -109,6 +118,9 @@ class WorkerProvider extends ChangeNotifier {
       spo2: spo2,
       latitude: lat,
       longitude: lng,
+      gasRate: gas,
+      accelX: accelX,
+      oxygenRate: oxygenRate,
       lastUpdated: DateTime.now(),
       status: status,
       statusColor: color,

@@ -18,7 +18,9 @@ class Worker {
   final double latitude;
   final double longitude;
   final DateTime? lastUpdated;
-
+  final int gasRate;
+  final double accelX;
+  final int oxygenRate;
   Worker({
     required this.name,
     required this.id,
@@ -35,6 +37,9 @@ class Worker {
     this.latitude = 0.0,
     this.longitude = 0.0,
     this.lastUpdated,
+    this.gasRate = 0,
+    this.accelX = 0.0,
+    this.oxygenRate = 0,
   });
 
   Worker copyWith({
@@ -46,6 +51,9 @@ class Worker {
     DateTime? lastUpdated,
     String? status,
     Color? statusColor,
+    int? gasRate,
+    double? accelX,
+    int? oxygenRate,
   }) {
     return Worker(
       name: name,
@@ -63,6 +71,9 @@ class Worker {
       lastUpdated: lastUpdated ?? this.lastUpdated,
       status: status ?? this.status,
       statusColor: statusColor ?? this.statusColor,
+      gasRate: gasRate ?? this.gasRate,
+      accelX: accelX ?? this.accelX,
+      oxygenRate: oxygenRate ?? this.oxygenRate,
     );
   }
 }
