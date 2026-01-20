@@ -347,9 +347,9 @@ class HomeContent extends StatelessWidget {
   const HomeContent({Key? key}) : super(key: key);
   String _getDisplayName(Worker worker) {
     if (worker.vestId == 'VEST-001') {
-      return '${worker.name} (L)';
+      return '${worker.name} (W)'; // Marcus = Worker
     } else if (worker.vestId == 'VEST-002') {
-      return '${worker.name} (W)';
+      return '${worker.name} (L)'; // Sarah = Leader
     }
     return worker.name;
   }
@@ -358,8 +358,7 @@ class HomeContent extends StatelessWidget {
   Widget build(BuildContext context) {
     return Consumer<WorkerProvider>(
       builder: (context, workerProvider, child) {
-        final allWorkers = workerProvider.activeWorkers;
-
+        final allWorkers = workerProvider.workers;
         return SafeArea(
           child: Column(
             children: [
@@ -3098,8 +3097,9 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
 }
 
 // ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
-
 // ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
+
+/// ===== ANIMATED VITAL CARD =====
 class AnalyticsDashboardContent extends StatefulWidget {
   const AnalyticsDashboardContent({Key? key}) : super(key: key);
 
@@ -3110,10 +3110,10 @@ class AnalyticsDashboardContent extends StatefulWidget {
 
 class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
     with SingleTickerProviderStateMixin {
-  String? selectedVestId;
-
+  String? selectedVestId; // Keep this as nullable
   late AnimationController _rotationController;
-  late Animation<double> _rotation;
+  bool _isInitialized = false; // ✅ Add this flag
+
   @override
   void initState() {
     super.initState();
@@ -3121,9 +3121,6 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
     _rotationController =
         AnimationController(vsync: this, duration: const Duration(seconds: 12))
           ..repeat();
-
-    _rotation =
-        Tween<double>(begin: 0, end: 2 * 3.1416).animate(_rotationController);
   }
 
   @override
@@ -3138,12 +3135,28 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
       builder: (context, provider, _) {
         final workers = provider.workers;
 
-        final selectedWorker = selectedVestId == null
-            ? null
-            : workers.firstWhere(
-                (w) => w.vestId == selectedVestId,
-                orElse: () => workers.first,
-              );
+        if (workers.isEmpty) {
+          return const Center(
+            child: Text("No workers available",
+                style: TextStyle(color: Colors.white)),
+          );
+        }
+
+        // ✅ FIX: Initialize selectedVestId on first build
+        if (!_isInitialized && workers.isNotEmpty) {
+          selectedVestId = workers.first.vestId;
+          _isInitialized = true;
+          // Force a rebuild after initialization
+          WidgetsBinding.instance.addPostFrameCallback((_) {
+            if (mounted) setState(() {});
+          });
+        }
+
+        final String currentVestId = selectedVestId ?? workers.first.vestId;
+        final selectedWorker = workers.firstWhere(
+          (w) => w.vestId == currentVestId,
+          orElse: () => workers.first,
+        );
 
         return SafeArea(
           child: SingleChildScrollView(
@@ -3151,27 +3164,16 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                /// ===== TITLE =====
                 const Text(
                   'Worker Detailed View',
                   style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                      fontSize: 24,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Live Worker Visualization & Vitals',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
-                ),
+                const SizedBox(height: 6),
 
-                const SizedBox(height: 20),
-
-                /// ===== DROPDOWN =====
+                /// DROPDOWN
                 Container(
                   padding: const EdgeInsets.symmetric(horizontal: 12),
                   decoration: BoxDecoration(
@@ -3181,25 +3183,23 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
                   child: DropdownButtonHideUnderline(
                     child: DropdownButton<String>(
                       dropdownColor: const Color(0xFF1A3344),
-                      hint: const Text(
-                        'Select Worker',
-                        style: TextStyle(color: Colors.white70),
-                      ),
-                      value: selectedVestId,
+                      value:
+                          currentVestId, // ✅ This now has a proper initial value
                       isExpanded: true,
                       items: workers.map((w) {
                         return DropdownMenuItem(
                           value: w.vestId,
-                          child: Text(
-                            "${w.name} (${w.vestId})",
-                            style: const TextStyle(color: Colors.white),
-                          ),
+                          child: Text("${w.name} (${w.vestId})",
+                              style: const TextStyle(color: Colors.white)),
                         );
                       }).toList(),
                       onChanged: (val) {
-                        setState(() {
-                          selectedVestId = val;
-                        });
+                        if (val != null && val != selectedVestId) {
+                          // ✅ Added null check
+                          setState(() {
+                            selectedVestId = val;
+                          });
+                        }
                       },
                     ),
                   ),
@@ -3207,127 +3207,108 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
 
                 const SizedBox(height: 24),
 
-                if (selectedWorker == null)
-                  Center(
-                    child: Text(
-                      "Select a worker to view details",
-                      style: TextStyle(color: Colors.white.withOpacity(0.6)),
-                    ),
-                  )
-                else ...[
-                  /// ===== ROTATING IMAGE =====
-                  AnimatedBuilder(
-                    animation: _rotationController,
-                    builder: (context, child) {
-                      final angle = _rotationController.value * 2 * math.pi;
+                /// ROTATING IMAGE
+                AnimatedBuilder(
+                  animation: _rotationController,
+                  builder: (context, child) {
+                    final angle = _rotationController.value * 2 * math.pi;
 
-                      return Center(
-                        child: Transform.translate(
-                          offset: const Offset(0,
-                              -10), // 🔥 move slightly upward (adjust if needed)
-                          child: Transform(
-                            alignment: Alignment.center,
-                            transform: Matrix4.identity()
-                              ..setEntry(3, 2, 0.0005)
-                              ..rotateY(angle),
-                            child: child,
-                          ),
-                        ),
-                      );
-                    },
-                    child: Image.asset(
-                      selectedWorker.name.contains("Marcus")
-                          ? "assets/workers/marcus.png"
-                          : "assets/workers/sarah.png",
-                      height: 230,
-                      fit: BoxFit.contain,
-                    ),
-                  ),
-
-                  /// ===== VITAL CARDS =====
-                  Padding(
-                    padding: const EdgeInsets.only(top: 16),
-                    child: GridView.count(
-                      crossAxisCount: 3,
-                      shrinkWrap: true,
-                      physics: const NeverScrollableScrollPhysics(),
-                      crossAxisSpacing: 14,
-                      mainAxisSpacing: 14,
-                      children: [
-                        _buildVitalCard(
-                            Icons.favorite,
-                            "${selectedWorker.heartRate} BPM",
-                            "Heart Rate",
-                            Colors.red),
-                        _buildVitalCard(
-                            Icons.thermostat,
-                            "${selectedWorker.temperature.toStringAsFixed(1)} °F",
-                            "Temperature",
-                            Colors.orange),
-                        _buildVitalCard(Icons.air, "${selectedWorker.spo2} %",
-                            "SpO₂", Colors.blue),
-                        _buildVitalCard(
-                            Icons.bloodtype,
-                            "${selectedWorker.oxygenRate}",
-                            "Oxygen",
-                            Colors.cyan),
-                        _buildVitalCard(
-                            Icons.cloud,
-                            "${selectedWorker.gasRate} ppm",
-                            "Gas Level",
-                            Colors.green),
-                        _buildVitalCard(
-                            Icons.screen_rotation,
-                            selectedWorker.accelX.toStringAsFixed(2),
-                            "Accel-X",
-                            Colors.purple),
-                      ],
-                    ),
-                  ),
-
-                  /// ===== LOCATION =====
-                  Container(
-                    padding: const EdgeInsets.all(16),
-                    decoration: BoxDecoration(
-                      color: const Color(0xFF1A2F3F),
-                      borderRadius: BorderRadius.circular(12),
-                    ),
-                    child: Row(
-                      children: [
-                        const Icon(Icons.location_on, color: Colors.white70),
-                        const SizedBox(width: 8),
-                        Expanded(
-                          child: Text(
-                            selectedWorker.latitude == 0
-                                ? selectedWorker.location
-                                : "Lat: ${selectedWorker.latitude.toStringAsFixed(5)}, "
-                                    "Lng: ${selectedWorker.longitude.toStringAsFixed(5)}",
-                            style: const TextStyle(color: Colors.white),
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  /// ===== STATUS =====
-                  Row(
-                    children: [
-                      const Text(
-                        "Status: ",
-                        style: TextStyle(color: Colors.white70),
+                    return Center(
+                      child: Transform(
+                        alignment: Alignment.center,
+                        transform: Matrix4.identity()
+                          ..setEntry(3, 2, 0.0005)
+                          ..rotateY(angle),
+                        child: child,
                       ),
-                      Text(
-                        selectedWorker.status,
-                        style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: selectedWorker.statusColor,
+                    );
+                  },
+                  child: Image.asset(
+                    selectedWorker.vestId == "VEST-001"
+                        ? "assets/workers/marcus.png"
+                        : "assets/workers/sarah.png",
+                    height: 220,
+                  ),
+                ),
+
+                const SizedBox(height: 16),
+
+                /// VITAL CARDS
+                Wrap(
+                  spacing: 14,
+                  runSpacing: 14,
+                  children: [
+                    _animatedVitalCard(
+                        Icons.favorite,
+                        "${selectedWorker.heartRate} BPM",
+                        "Heart Rate",
+                        Colors.red),
+                    _animatedVitalCard(
+                        Icons.thermostat,
+                        "${selectedWorker.temperature.toStringAsFixed(1)} °F",
+                        "Temperature",
+                        Colors.orange),
+                    _animatedVitalCard(Icons.air, "${selectedWorker.spo2} %",
+                        "SpO₂", Colors.blue),
+                    _animatedVitalCard(Icons.bloodtype,
+                        "${selectedWorker.oxygenRate}", "Oxygen", Colors.cyan),
+                    _animatedVitalCard(
+                        Icons.cloud,
+                        "${selectedWorker.gasRate} ppm",
+                        "Gas Level",
+                        Colors.green),
+                    _animatedVitalCard(
+                        Icons.screen_rotation,
+                        (selectedWorker.accelX.isNaN
+                                ? 0.0
+                                : selectedWorker.accelX)
+                            .toStringAsFixed(2),
+                        "Accel-X",
+                        Colors.purple),
+                  ],
+                ),
+
+                const SizedBox(height: 20),
+
+                /// LOCATION
+                Container(
+                  padding: const EdgeInsets.all(16),
+                  decoration: BoxDecoration(
+                    color: const Color(0xFF1A2F3F),
+                    borderRadius: BorderRadius.circular(12),
+                  ),
+                  child: Row(
+                    children: [
+                      const Icon(Icons.location_on, color: Colors.white70),
+                      const SizedBox(width: 8),
+                      Expanded(
+                        child: Text(
+                          selectedWorker.latitude == 0
+                              ? selectedWorker.location
+                              : "Lat: ${selectedWorker.latitude.toStringAsFixed(5)}, "
+                                  "Lng: ${selectedWorker.longitude.toStringAsFixed(5)}",
+                          style: const TextStyle(color: Colors.white),
                         ),
                       ),
                     ],
                   ),
-                ],
+                ),
+
+                const SizedBox(height: 12),
+
+                /// STATUS
+                Row(
+                  children: [
+                    const Text("Status: ",
+                        style: TextStyle(color: Colors.white70)),
+                    Text(
+                      selectedWorker.status,
+                      style: TextStyle(
+                          fontWeight: FontWeight.bold,
+                          color: selectedWorker.statusColor),
+                    ),
+                  ],
+                ),
               ],
             ),
           ),
@@ -3336,41 +3317,47 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
     );
   }
 
-  Widget _buildVitalCard(
-    IconData icon,
-    String value,
-    String label,
-    Color color,
-  ) {
-    return Expanded(
-      child: Container(
-        padding: const EdgeInsets.all(12),
-        decoration: BoxDecoration(
-          color: const Color(0xFF1A2F3F),
-          borderRadius: BorderRadius.circular(12),
-        ),
-        child: Column(
-          children: [
-            Icon(icon, color: color, size: 24),
-            const SizedBox(height: 8),
-            Text(
-              value,
-              style: const TextStyle(
-                fontSize: 15,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+  Widget _animatedVitalCard(
+      IconData icon, String value, String label, Color color) {
+    return Container(
+      width: (MediaQuery.of(context).size.width - 70) / 3,
+      padding: const EdgeInsets.all(14),
+      decoration: BoxDecoration(
+        color: const Color(0xFF1A2F3F),
+        borderRadius: BorderRadius.circular(16),
+        boxShadow: [
+          BoxShadow(
+            color: color.withOpacity(0.35),
+            blurRadius: 12,
+            spreadRadius: 1,
+          )
+        ],
+      ),
+      child: Column(
+        children: [
+          Icon(icon, color: color, size: 28),
+          const SizedBox(height: 10),
+
+          // ✅ FIXED: Removed AnimatedSwitcher that was causing blinking
+          Text(
+            value,
+            textAlign: TextAlign.center,
+            style: const TextStyle(
+              fontSize: 15,
+              fontWeight: FontWeight.bold,
+              color: Colors.white,
             ),
-            const SizedBox(height: 4),
-            Text(
-              label,
-              style: TextStyle(
-                fontSize: 11,
-                color: Colors.white.withOpacity(0.6),
-              ),
+          ),
+
+          const SizedBox(height: 6),
+          Text(
+            label,
+            style: TextStyle(
+              fontSize: 11,
+              color: Colors.white.withOpacity(0.6),
             ),
-          ],
-        ),
+          ),
+        ],
       ),
     );
   }

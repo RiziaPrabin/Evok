@@ -15,8 +15,6 @@ class WorkerProvider extends ChangeNotifier {
       department: 'Excavation',
       location: 'Tunnel A-2',
       assigned: '2025-01-20',
-      status: 'OFFLINE',
-      statusColor: Colors.grey,
     ),
     Worker(
       name: 'Sarah Chen',
@@ -26,20 +24,15 @@ class WorkerProvider extends ChangeNotifier {
       department: 'Safety Inspection',
       location: 'Tunnel B-1',
       assigned: '2025-01-20',
-      status: 'OFFLINE',
-      statusColor: Colors.grey,
     ),
   ];
 
   WorkerProvider() {
-    _listenLeader();
-    _listenWorker();
+    _listenWorker(); // Marcus
+    _listenLeader(); // Sarah
   }
 
   List<Worker> get workers => _workers;
-
-  List<Worker> get activeWorkers =>
-      _workers.where((w) => w.status != 'OFFLINE').toList();
 
   int get activeWorkersCount =>
       _workers.where((w) => w.status == 'ONLINE' || w.status == 'ALERT').length;
@@ -49,46 +42,63 @@ class WorkerProvider extends ChangeNotifier {
   int get offlineWorkersCount =>
       _workers.where((w) => w.status == 'OFFLINE').length;
 
-  // ================= LEADER =================
-  void _listenLeader() {
-    _rootRef.child("Leader").onValue.listen((event) {
-      if (!event.snapshot.exists) return;
+  // ================= MARCUS (Worker node) =================
+  void _listenWorker() {
+    _rootRef.child("Worker").onValue.listen((event) {
+      if (!event.snapshot.exists || event.snapshot.value == null) return;
 
-      final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+      final accel =
+          double.tryParse(event.snapshot.child('AccelX').value.toString()) ??
+              0.0;
+
+      debugPrint("🔥 Marcus AccelX = $accel");
 
       _updateWorker(
         vestId: "VEST-001",
-        bpm: data['BPM'] ?? 0,
-        temp: (data['Temp'] ?? 0).toDouble(),
-        spo2: data['SpO2'] ?? 0,
-        panic: data['Panic'] ?? 0,
-        lat: (data['Lat'] ?? 0).toDouble(),
-        lng: (data['Lng'] ?? 0).toDouble(),
-        gas: data['Gas'] ?? 0,
-        accelX: (data['AcceLX'] ?? 0).toDouble(),
-        oxygenRate: data['O2'] ?? 0,
+        bpm: int.tryParse(event.snapshot.child('BPM').value.toString()) ?? 0,
+        temp: double.tryParse(event.snapshot.child('Temp').value.toString()) ??
+            0.0,
+        spo2: int.tryParse(event.snapshot.child('SpO2').value.toString()) ?? 0,
+        panic:
+            int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0,
+        lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
+            0.0,
+        lng: double.tryParse(event.snapshot.child('Lng').value.toString()) ??
+            0.0,
+        gas: int.tryParse(event.snapshot.child('Gas').value.toString()) ?? 0,
+        accelX: accel,
+        oxygenRate: 0,
       );
     });
   }
 
-  // ================= WORKER =================
-  void _listenWorker() {
-    _rootRef.child("Worker").onValue.listen((event) {
-      if (!event.snapshot.exists) return;
+  // ================= SARAH (Leader node) =================
+  void _listenLeader() {
+    _rootRef.child("Leader").onValue.listen((event) {
+      if (!event.snapshot.exists || event.snapshot.value == null) return;
 
-      final data = Map<String, dynamic>.from(event.snapshot.value as Map);
+      final accel =
+          double.tryParse(event.snapshot.child('AccelX').value.toString()) ??
+              0.0;
+
+      debugPrint("🔥 Sarah AccelX = $accel");
 
       _updateWorker(
         vestId: "VEST-002",
-        bpm: data['BPM'] ?? 0,
-        temp: (data['Temp'] ?? 0).toDouble(),
-        spo2: data['SpO2'] ?? 0,
-        panic: data['Panic'] ?? 0,
-        lat: (data['Lat'] ?? 0).toDouble(),
-        lng: (data['Lng'] ?? 0).toDouble(),
-        gas: data['Gas'] ?? 0,
-        accelX: (data['AcceLX'] ?? 0).toDouble(),
-        oxygenRate: data['O2'] ?? 0,
+        bpm: 0,
+        temp: double.tryParse(event.snapshot.child('Temp').value.toString()) ??
+            0.0,
+        spo2: 0,
+        panic:
+            int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0,
+        lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
+            0.0,
+        lng: double.tryParse(event.snapshot.child('Lng').value.toString()) ??
+            0.0,
+        gas: int.tryParse(event.snapshot.child('Gas').value.toString()) ?? 0,
+        accelX: accel,
+        oxygenRate:
+            int.tryParse(event.snapshot.child('O2').value.toString()) ?? 0,
       );
     });
   }
@@ -129,13 +139,14 @@ class WorkerProvider extends ChangeNotifier {
     notifyListeners();
   }
 
-  void removeWorker(String id) {
-    _workers.removeWhere((w) => w.id == id);
+  // ================= ADD / REMOVE =================
+  void addWorker(Worker worker) {
+    _workers.add(worker);
     notifyListeners();
   }
 
-  void addWorker(Worker worker) {
-    _workers.add(worker);
+  void removeWorker(String id) {
+    _workers.removeWhere((w) => w.id == id);
     notifyListeners();
   }
 
