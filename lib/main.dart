@@ -3172,6 +3172,14 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
                       color: Colors.white),
                 ),
                 const SizedBox(height: 6),
+                Text(
+                  'Real-time Vitals Display',
+                  style: TextStyle(
+                    fontSize: 13,
+                    color: Colors.white.withOpacity(0.6),
+                  ),
+                ),
+                const SizedBox(height: 12),
 
                 /// DROPDOWN
                 Container(
