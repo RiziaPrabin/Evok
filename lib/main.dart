@@ -769,6 +769,7 @@ class HomeContent extends StatelessWidget {
 
 // ==================== 2. WORKER MANAGEMENT CONTENT ====================
 // Replace the entire WorkerManagementContent class with this:
+
 class WorkerManagementContent extends StatefulWidget {
   const WorkerManagementContent({Key? key}) : super(key: key);
 
@@ -808,7 +809,7 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
   @override
   Widget build(BuildContext context) {
     return Consumer<WorkerProvider>(
-      builder: (context, workerProvider, child) {
+      builder: (context, workerProvider, _) {
         final filteredWorkers = _getFilteredWorkers(workerProvider.workers);
 
         return SafeArea(
@@ -866,6 +867,8 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
                   ],
                 ),
               ),
+
+              // SEARCH
               Padding(
                 padding: const EdgeInsets.symmetric(horizontal: 20),
                 child: TextField(
@@ -884,7 +887,10 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
                   ),
                 ),
               ),
+
               const SizedBox(height: 20),
+
+              // LIST
               Expanded(
                 child: ListView.builder(
                   padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -893,7 +899,7 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
                     final worker = filteredWorkers[index];
                     return Padding(
                       padding: const EdgeInsets.only(bottom: 16),
-                      child: _buildWorkerDetailCard(worker: worker),
+                      child: _buildWorkerDetailCard(worker),
                     );
                   },
                 ),
@@ -905,7 +911,8 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
     );
   }
 
-  Widget _buildWorkerDetailCard({required Worker worker}) {
+  // ================= CARD =================
+  Widget _buildWorkerDetailCard(Worker worker) {
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
@@ -915,6 +922,7 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
+          // HEADER
           Row(
             mainAxisAlignment: MainAxisAlignment.spaceBetween,
             children: [
@@ -935,7 +943,9 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
               ),
             ],
           ),
+
           const SizedBox(height: 6),
+
           Text(
             'ID: ${worker.id} • Vest: ${worker.vestId}',
             style: TextStyle(
@@ -943,10 +953,14 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
               fontSize: 12,
             ),
           ),
+
           const SizedBox(height: 12),
+
           _buildDetailRow('Shift:', worker.shift),
           _buildDetailRow('Department:', worker.department),
+
           const SizedBox(height: 8),
+
           Row(
             children: [
               Icon(
@@ -967,9 +981,14 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
               ),
             ],
           ),
+
           const SizedBox(height: 8),
+
           _buildDetailRow('Assigned:', worker.assigned),
+
           const SizedBox(height: 16),
+
+          // TRACK + DELETE
           Row(
             children: [
               Expanded(
@@ -991,14 +1010,17 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
               const SizedBox(width: 12),
               Expanded(
                 child: ElevatedButton(
-                  style: ElevatedButton.styleFrom(backgroundColor: Colors.red),
+                  style: ElevatedButton.styleFrom(
+                    backgroundColor: Colors.red,
+                  ),
                   onPressed: () async {
                     final confirm = await showDialog<bool>(
                       context: context,
                       builder: (context) => AlertDialog(
                         title: const Text('Delete Worker'),
                         content: const Text(
-                            'Are you sure you want to delete this worker permanently?'),
+                          'Are you sure you want to delete this worker permanently?',
+                        ),
                         actions: [
                           TextButton(
                             onPressed: () => Navigator.pop(context, false),
@@ -1031,11 +1053,45 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
               ),
             ],
           ),
+
+          const SizedBox(height: 12),
+
+          // RESOLVE ALERT
+          SizedBox(
+            width: double.infinity,
+            child: ElevatedButton.icon(
+              icon: const Icon(Icons.check_circle_outline),
+              label: const Text('Resolve Alert'),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: const Color(0xFF00C853),
+                foregroundColor: Colors.black,
+                padding: const EdgeInsets.symmetric(vertical: 14),
+                shape: RoundedRectangleBorder(
+                  borderRadius: BorderRadius.circular(12),
+                ),
+              ),
+              onPressed: worker.status == 'ALERT'
+                  ? () async {
+                      await context
+                          .read<WorkerProvider>()
+                          .resolveWorkerAlert(worker.vestId);
+
+                      ScaffoldMessenger.of(context).showSnackBar(
+                        const SnackBar(
+                          content: Text('Alert resolved. Worker is ONLINE'),
+                          backgroundColor: Color(0xFF00C853),
+                        ),
+                      );
+                    }
+                  : null,
+            ),
+          ),
         ],
       ),
     );
   }
 
+  // ================= ROW =================
   Widget _buildDetailRow(String label, String value) {
     return Row(
       children: [
@@ -1049,7 +1105,13 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
             ),
           ),
         ),
-        Text(value, style: const TextStyle(color: Colors.white, fontSize: 13)),
+        Text(
+          value,
+          style: const TextStyle(
+            color: Colors.white,
+            fontSize: 13,
+          ),
+        ),
       ],
     );
   }

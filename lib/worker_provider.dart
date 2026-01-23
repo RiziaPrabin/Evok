@@ -153,4 +153,31 @@ class WorkerProvider extends ChangeNotifier {
   String getNextWorkerId() {
     return (_workers.length + 1).toString().padLeft(3, '0');
   }
+
+  Future<void> resolveWorkerAlert(String vestId) async {
+    // Decide which Firebase node to update
+    String node;
+    if (vestId == 'VEST-001') {
+      node = 'Worker';
+    } else if (vestId == 'VEST-002') {
+      node = 'Leader';
+    } else {
+      return;
+    }
+
+    // 1️⃣ Update Firebase panic value
+    await _rootRef.child(node).update({
+      'Panic': 0,
+    });
+
+    // 2️⃣ OPTIONAL immediate UI safety update (not strictly required)
+    final index = _workers.indexWhere((w) => w.vestId == vestId);
+    if (index != -1) {
+      _workers[index] = _workers[index].copyWith(
+        status: 'ONLINE',
+        statusColor: const Color(0xFF00FF41),
+      );
+      notifyListeners();
+    }
+  }
 }
