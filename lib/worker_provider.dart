@@ -1,10 +1,15 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'worker_model.dart';
+import 'alert_sound_service.dart'; // ✅ Add this import
 
 class WorkerProvider extends ChangeNotifier {
-  final DatabaseReference _rootRef =
-      FirebaseDatabase.instance.ref("EVOK_System/Live_Data");
+  final DatabaseReference _rootRef = FirebaseDatabase.instance.ref(
+    "EVOK_System/Live_Data",
+  );
+
+  final AlertSoundService _alertSound = AlertSoundService();
+  final Map<String, int> _previousPanicStates = {};
 
   List<Worker> _workers = [
     Worker(
@@ -28,8 +33,8 @@ class WorkerProvider extends ChangeNotifier {
   ];
 
   WorkerProvider() {
-    _listenWorker(); // Marcus
-    _listenLeader(); // Sarah
+    _listenWorker();
+    _listenLeader();
   }
 
   List<Worker> get workers => _workers;
@@ -42,7 +47,8 @@ class WorkerProvider extends ChangeNotifier {
   int get offlineWorkersCount =>
       _workers.where((w) => w.status == 'OFFLINE').length;
 
-  // ================= MARCUS (Worker node) =================
+  bool get hasActiveAlert => _workers.any((w) => w.status == 'ALERT');
+
   void _listenWorker() {
     _rootRef.child("Worker").onValue.listen((event) {
       if (!event.snapshot.exists || event.snapshot.value == null) return;
@@ -51,7 +57,10 @@ class WorkerProvider extends ChangeNotifier {
           double.tryParse(event.snapshot.child('AccelX').value.toString()) ??
               0.0;
 
-      debugPrint("🔥 Marcus AccelX = $accel");
+      final panic =
+          int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0;
+
+      debugPrint("🔥 Marcus AccelX = $accel, Panic = $panic");
 
       _updateWorker(
         vestId: "VEST-001",
@@ -59,8 +68,7 @@ class WorkerProvider extends ChangeNotifier {
         temp: double.tryParse(event.snapshot.child('Temp').value.toString()) ??
             0.0,
         spo2: int.tryParse(event.snapshot.child('SpO2').value.toString()) ?? 0,
-        panic:
-            int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0,
+        panic: panic,
         lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
             0.0,
         lng: double.tryParse(event.snapshot.child('Lng').value.toString()) ??
@@ -72,7 +80,6 @@ class WorkerProvider extends ChangeNotifier {
     });
   }
 
-  // ================= SARAH (Leader node) =================
   void _listenLeader() {
     _rootRef.child("Leader").onValue.listen((event) {
       if (!event.snapshot.exists || event.snapshot.value == null) return;
@@ -81,7 +88,10 @@ class WorkerProvider extends ChangeNotifier {
           double.tryParse(event.snapshot.child('AccelX').value.toString()) ??
               0.0;
 
-      debugPrint("🔥 Sarah AccelX = $accel");
+      final panic =
+          int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0;
+
+      debugPrint("🔥 Sarah AccelX = $accel, Panic = $panic");
 
       _updateWorker(
         vestId: "VEST-002",
@@ -89,8 +99,7 @@ class WorkerProvider extends ChangeNotifier {
         temp: double.tryParse(event.snapshot.child('Temp').value.toString()) ??
             0.0,
         spo2: 0,
-        panic:
-            int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0,
+        panic: panic,
         lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
             0.0,
         lng: double.tryParse(event.snapshot.child('Lng').value.toString()) ??
@@ -103,7 +112,6 @@ class WorkerProvider extends ChangeNotifier {
     });
   }
 
-  // ================= UPDATE =================
   void _updateWorker({
     required String vestId,
     required int bpm,
@@ -118,6 +126,12 @@ class WorkerProvider extends ChangeNotifier {
   }) {
     final index = _workers.indexWhere((w) => w.vestId == vestId);
     if (index == -1) return;
+
+    final previousPanic = _previousPanicStates[vestId] ?? 0;
+    final isNewAlert = previousPanic == 0 && panic == 1;
+    final isAlertResolved = previousPanic == 1 && panic == 0;
+
+    _previousPanicStates[vestId] = panic;
 
     final status = panic == 1 ? 'ALERT' : 'ONLINE';
     final color = panic == 1 ? Colors.red : const Color(0xFF00FF41);
@@ -137,9 +151,19 @@ class WorkerProvider extends ChangeNotifier {
     );
 
     notifyListeners();
+    // ✅ PLAY/STOP ALERT SOUND BASED ON PANIC STATE
+    if (isNewAlert) {
+      debugPrint("🚨 NEW PANIC ALERT for $vestId - STARTING SOUND");
+      _alertSound.playPanicAlert();
+    } else if (isAlertResolved) {
+      debugPrint("✅ Panic resolved for $vestId - STOPPING SOUND");
+      // Only stop if no other workers are in alert
+      if (!hasActiveAlert) {
+        _alertSound.stopAlert();
+      }
+    }
   }
 
-  // ================= ADD / REMOVE =================
   void addWorker(Worker worker) {
     _workers.add(worker);
     notifyListeners();
@@ -155,7 +179,6 @@ class WorkerProvider extends ChangeNotifier {
   }
 
   Future<void> resolveWorkerAlert(String vestId) async {
-    // Decide which Firebase node to update
     String node;
     if (vestId == 'VEST-001') {
       node = 'Worker';
@@ -165,19 +188,26 @@ class WorkerProvider extends ChangeNotifier {
       return;
     }
 
-    // 1️⃣ Update Firebase panic value
-    await _rootRef.child(node).update({
-      'Panic': 0,
-    });
+    await _rootRef.child(node).update({'Panic': 0});
 
-    // 2️⃣ OPTIONAL immediate UI safety update (not strictly required)
     final index = _workers.indexWhere((w) => w.vestId == vestId);
     if (index != -1) {
       _workers[index] = _workers[index].copyWith(
         status: 'ONLINE',
         statusColor: const Color(0xFF00FF41),
       );
+
+      if (!hasActiveAlert) {
+        _alertSound.stopAlert();
+      }
+
       notifyListeners();
     }
+  }
+
+  @override
+  void dispose() {
+    _alertSound.dispose();
+    super.dispose();
   }
 }

@@ -46,7 +46,7 @@ dependencies:
   firebase_database: ^10.5.0
   flutter_map: ^8.2.2
   latlong2: ^0.9.1
-
+  audioplayers: ^5.2.1
 dev_dependencies:
   flutter_test:
     sdk: flutter
@@ -68,7 +68,7 @@ flutter:
 
   assets:
     - assets/workers/
-
+    - assets/sounds/
 flutter_launcher_icons:
   android: "launcher_icon"
   ios: true
