@@ -18,7 +18,6 @@ import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'live_tracking_page.dart';
 import 'dart:math' as math;
-import 'alert_sound_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1475,7 +1474,7 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
   }
 }
 
-// ==================== 4. COMMUNICATION HUB CONTENT ====================
+// ==================== COMMUNICATION HUB CONTENT ====================
 class CommunicationHubContent extends StatefulWidget {
   const CommunicationHubContent({Key? key}) : super(key: key);
 
@@ -1486,67 +1485,84 @@ class CommunicationHubContent extends StatefulWidget {
 
 class _CommunicationHubContentState extends State<CommunicationHubContent> {
   String _selectedTab = 'Messaging';
-  final TextEditingController _messageController = TextEditingController();
 
-  final FlutterSoundRecorder _recorder = FlutterSoundRecorder();
-  bool _isRecording = false;
-  String _translatedMessage = "";
+  // Firebase reference
+  final DatabaseReference _audioCommandRef = FirebaseDatabase.instance.ref(
+    "EVOK_System/Audio_Command",
+  );
 
   Position? _currentPosition;
   String _currentAddress = "";
 
-  // Language selection variables
+  // Language selection
   String selectedLangName = "Hindi";
   String selectedLangCode = "hi";
-  String selectedVoice = "hi-IN-SwaraNeural";
 
-  // English
-  final String englishName = "English";
-  final String englishCode = "en";
-  final String englishVoice = "en-IN-NeerjaNeural";
+  // Available languages
+  final Map<String, String> languages = {
+    "English": "en",
+    "Hindi": "hi",
+    "Tamil": "ta",
+    "Malayalam": "ml",
+    "Telugu": "te",
+  };
 
-  // Hindi
-  final String hindiName = "Hindi";
-  final String hindiCode = "hi";
-  final String hindiVoice = "hi-IN-SwaraNeural";
-
-  // Tamil
-  final String tamilName = "Tamil";
-  final String tamilCode = "ta";
-  final String tamilVoice = "ta-IN-PallaviNeural";
-
-  // Malayalam
-  final String malayalamName = "Malayalam";
-  final String malayalamCode = "ml";
-  final String malayalamVoice = "ml-IN-SobhanaNeural";
-
-  // Telugu
-  final String teluguName = "Telugu";
-  final String teluguCode = "te";
-  final String teluguVoice = "te-IN-MohanNeural";
-
-  // No API key needed - using free OpenStreetMap Overpass API
+  // Predefined commands with emojis
+  final List<Map<String, dynamic>> commands = [
+    {
+      "command": "FIRE_DETECTED",
+      "display": "Fire Detected",
+      "emoji": "🔥",
+      "color": Colors.red,
+    },
+    {
+      "command": "EVACUATE",
+      "display": "Evacuate",
+      "emoji": "🚨",
+      "color": Colors.orange,
+    },
+    {
+      "command": "STOP_WORK",
+      "display": "Stop Work",
+      "emoji": "✋",
+      "color": Colors.amber,
+    },
+    {
+      "command": "ROCK_FALL_WARNING",
+      "display": "Rock Fall Warning",
+      "emoji": "⛰️",
+      "color": Colors.red,
+    },
+    {
+      "command": "GAS_DETECTED",
+      "display": "Gas Detected",
+      "emoji": "💨",
+      "color": Colors.purple,
+    },
+    {
+      "command": "EQUIPMENT_FAILURE",
+      "display": "Equipment Failure",
+      "emoji": "⚠️",
+      "color": Colors.yellow,
+    },
+    {
+      "command": "ALL_CLEAR",
+      "display": "All Clear",
+      "emoji": "✅",
+      "color": Colors.green,
+    },
+    {
+      "command": "RETURN_TO_STATION",
+      "display": "Return to Station",
+      "emoji": "🏠",
+      "color": Colors.blue,
+    },
+  ];
 
   @override
   void initState() {
     super.initState();
-    _initRecorder();
     _getCurrentLocation();
-  }
-
-  Future<void> _initRecorder() async {
-    final status = await Permission.microphone.request();
-    if (status != PermissionStatus.granted) {
-      throw Exception('Microphone permission not granted');
-    }
-    await _recorder.openRecorder();
-  }
-
-  @override
-  void dispose() {
-    _recorder.closeRecorder();
-    _messageController.dispose();
-    super.dispose();
   }
 
   Future<void> _getCurrentLocation() async {
@@ -1591,6 +1607,225 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     }
   }
 
+  // Send audio command to Firebase
+  Future<void> _sendAudioCommand(String command, String displayText) async {
+    try {
+      await _audioCommandRef.set({
+        'command': command,
+        'language': selectedLangCode,
+        'timestamp': DateTime.now().toIso8601String(),
+      });
+
+      _showSnackBar('Command "$displayText" sent in $selectedLangName');
+
+      // Show confirmation dialog
+      _showCommandConfirmation(displayText, command);
+    } catch (e) {
+      debugPrint("Error sending command: $e");
+      _showSnackBar('Failed to send command');
+    }
+  }
+
+  void _showCommandConfirmation(String displayText, String command) {
+    showDialog(
+      context: context,
+      barrierDismissible: false,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A2F3F),
+          title: Row(
+            children: [
+              Icon(Icons.check_circle, color: Color(0xFF00FF41)),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Command Sent',
+                  style: TextStyle(
+                    color: Colors.white,
+                    fontWeight: FontWeight.bold,
+                  ),
+                ),
+              ),
+            ],
+          ),
+          content: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Text(
+                'Broadcasting to all workers:',
+                style: TextStyle(color: Colors.white70, fontSize: 13),
+              ),
+              SizedBox(height: 12),
+              Container(
+                padding: EdgeInsets.all(12),
+                decoration: BoxDecoration(
+                  color: Color(0xFF00FF41).withOpacity(0.1),
+                  borderRadius: BorderRadius.circular(8),
+                  border: Border.all(color: Color(0xFF00FF41)),
+                ),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    Text(
+                      displayText,
+                      style: TextStyle(
+                        color: Color(0xFF00FF41),
+                        fontSize: 16,
+                        fontWeight: FontWeight.bold,
+                      ),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Language: $selectedLangName',
+                      style: TextStyle(color: Colors.white70, fontSize: 12),
+                    ),
+                    SizedBox(height: 4),
+                    Text(
+                      'Command: $command',
+                      style: TextStyle(color: Colors.white54, fontSize: 11),
+                    ),
+                  ],
+                ),
+              ),
+            ],
+          ),
+          actions: [
+            ElevatedButton(
+              onPressed: () => Navigator.of(context).pop(),
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Color(0xFF00FF41),
+                foregroundColor: Colors.black,
+              ),
+              child: Text('OK'),
+            ),
+          ],
+        );
+      },
+    );
+
+    // Auto close after 3 seconds
+    Future.delayed(Duration(seconds: 3), () {
+      if (Navigator.of(context).canPop()) {
+        Navigator.of(context).pop();
+      }
+    });
+  }
+
+  void _showLanguageSelector() {
+    showModalBottomSheet(
+      context: context,
+      backgroundColor: const Color(0xFF1A2F3F),
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
+      ),
+      builder: (_) {
+        return Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            Padding(
+              padding: const EdgeInsets.all(16.0),
+              child: Text(
+                'Select Language',
+                style: TextStyle(
+                  color: Colors.white,
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                ),
+              ),
+            ),
+            ...languages.entries.map((entry) {
+              return ListTile(
+                leading: Icon(
+                  selectedLangName == entry.key
+                      ? Icons.radio_button_checked
+                      : Icons.radio_button_unchecked,
+                  color: selectedLangName == entry.key
+                      ? Color(0xFF00FF41)
+                      : Colors.white54,
+                ),
+                title: Text(
+                  entry.key,
+                  style: TextStyle(
+                    color: selectedLangName == entry.key
+                        ? Color(0xFF00FF41)
+                        : Colors.white,
+                    fontWeight: selectedLangName == entry.key
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                ),
+                onTap: () {
+                  setState(() {
+                    selectedLangName = entry.key;
+                    selectedLangCode = entry.value;
+                  });
+                  Navigator.pop(context);
+                  _showSnackBar('Language changed to ${entry.key}');
+                },
+              );
+            }).toList(),
+            SizedBox(height: 16),
+          ],
+        );
+      },
+    );
+  }
+
+  void _showSnackBar(String message) {
+    ScaffoldMessenger.of(context).showSnackBar(
+      SnackBar(
+        content: Text(message),
+        backgroundColor: const Color(0xFF1A3344),
+        behavior: SnackBarBehavior.floating,
+      ),
+    );
+  }
+
+  void _activateProtocol(String protocolName) {
+    showDialog(
+      context: context,
+      builder: (BuildContext context) {
+        return AlertDialog(
+          backgroundColor: const Color(0xFF1A2F3F),
+          title: Row(
+            children: [
+              Icon(Icons.warning, color: Colors.red),
+              SizedBox(width: 8),
+              Expanded(
+                child: Text(
+                  'Activate Protocol',
+                  style: TextStyle(color: Colors.white),
+                ),
+              ),
+            ],
+          ),
+          content: Text(
+            'Are you sure you want to activate:\n\n$protocolName',
+            style: TextStyle(color: Colors.white),
+          ),
+          actions: [
+            TextButton(
+              onPressed: () => Navigator.of(context).pop(),
+              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
+            ),
+            ElevatedButton(
+              onPressed: () {
+                Navigator.of(context).pop();
+                _showSnackBar('$protocolName activated successfully');
+              },
+              style: ElevatedButton.styleFrom(
+                backgroundColor: Colors.red,
+                foregroundColor: Colors.white,
+              ),
+              child: Text('Activate'),
+            ),
+          ],
+        );
+      },
+    );
+  }
+
   // Find nearest place using Overpass API (OpenStreetMap - Free, no API key needed)
   Future<Map<String, dynamic>?> _findNearestPlace(String placeType) async {
     if (_currentPosition == null) {
@@ -1629,7 +1864,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       String query;
 
       if (placeType == 'police') {
-        // Search for police with multiple possible tags
         query = '''
         [out:json][timeout:15];
         (
@@ -1641,7 +1875,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
         out center;
         ''';
       } else if (placeType == 'hospital') {
-        // Search for hospitals and clinics
         query = '''
         [out:json][timeout:15];
         (
@@ -1653,7 +1886,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
         out center;
         ''';
       } else if (placeType == 'fire_station') {
-        // Search for fire stations
         query = '''
         [out:json][timeout:15];
         (
@@ -1689,8 +1921,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
 
         if (elements.isEmpty) {
           _showSnackBar('No nearby $placeType found within 5km');
-
-          // Show dialog with standard emergency numbers for India
           _showEmergencyNumbersFallback(placeType);
           return null;
         }
@@ -1703,7 +1933,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
           double? lat;
           double? lon;
 
-          // Handle both nodes (with direct lat/lon) and ways (with center)
           if (element['lat'] != null && element['lon'] != null) {
             lat = element['lat'].toDouble();
             lon = element['lon'].toDouble();
@@ -1728,7 +1957,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
                     'Unnamed $placeType',
                 'lat': lat,
                 'lon': lon,
-                'distance': (distance / 1000).toStringAsFixed(2), // km
+                'distance': (distance / 1000).toStringAsFixed(2),
                 'phone': element['tags']?['phone'] ??
                     element['tags']?['contact:phone'] ??
                     element['tags']?['emergency:phone'] ??
@@ -1753,7 +1982,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       }
     } catch (e) {
       if (Navigator.of(context).canPop()) {
-        Navigator.of(context).pop(); // Close loading dialog
+        Navigator.of(context).pop();
       }
       debugPrint("Error finding nearest place: $e");
       _showSnackBar('Error: $e');
@@ -1761,7 +1990,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     }
   }
 
-  // Make phone call to nearest service
   Future<void> _callNearestService(
     String serviceType,
     String serviceName,
@@ -1775,7 +2003,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     String phoneNumber = placeInfo['phone'];
     bool hasPhoneNumber = phoneNumber != 'Not available';
 
-    // Show confirmation dialog with place details
     bool? action = await showDialog<bool?>(
       context: context,
       builder: (BuildContext context) {
@@ -1930,7 +2157,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     );
 
     if (action == true && hasPhoneNumber) {
-      // Call the phone number
       final Uri launchUri = Uri(scheme: 'tel', path: phoneNumber);
 
       try {
@@ -1945,13 +2171,9 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
         _showSnackBar('Error: $e');
       }
     } else if (action == false) {
-      // Open in Google Maps
       _openInGoogleMaps(placeInfo['lat'], placeInfo['lon'], placeInfo['name']);
     }
   }
-
-  // Open location in Google Maps
-  // Replace your existing _openInGoogleMaps method with this:
 
   Future<void> _openInGoogleMaps(
     double lat,
@@ -1959,27 +2181,17 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     String placeName,
   ) async {
     try {
-      // Try different URL schemes in order of preference
-
-      // 1. Try Google Maps app with coordinates
       final Uri googleMapsApp = Uri.parse('google.navigation:q=$lat,$lon');
-
-      // 2. Try generic geo URI
       final Uri geoUri = Uri.parse('geo:$lat,$lon?q=$lat,$lon');
-
-      // 3. Try HTTPS Google Maps URL (will open in browser or Maps app)
       final Uri googleMapsWeb = Uri.parse(
         'https://www.google.com/maps/search/?api=1&query=$lat,$lon',
       );
-
-      // 4. Fallback: Open any maps app with coordinates
       final Uri genericMaps = Uri.parse(
         'geo:0,0?q=$lat,$lon(${Uri.encodeComponent(placeName)})',
       );
 
       bool launched = false;
 
-      // Try each option in sequence
       if (await canLaunchUrl(googleMapsApp)) {
         launched = await launchUrl(
           googleMapsApp,
@@ -2024,10 +2236,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
         }
       }
 
-      // If nothing worked, show error with coordinates
       _showSnackBar('Could not open maps. Coordinates: $lat, $lon');
-
-      // Show dialog with manual options
       _showManualMapsDialog(lat, lon, placeName);
     } catch (e) {
       debugPrint("Error opening maps: $e");
@@ -2036,7 +2245,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     }
   }
 
-  // Add this helper method to show manual options
   void _showManualMapsDialog(double lat, double lon, String placeName) {
     showDialog(
       context: context,
@@ -2096,7 +2304,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
           actions: [
             TextButton(
               onPressed: () {
-                // Copy coordinates to clipboard
                 Clipboard.setData(ClipboardData(text: '$lat, $lon'));
                 Navigator.of(context).pop();
                 _showSnackBar('Coordinates copied to clipboard');
@@ -2119,18 +2326,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       },
     );
   }
-
-  void _showSnackBar(String message) {
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text(message),
-        backgroundColor: const Color(0xFF1A3344),
-        behavior: SnackBarBehavior.floating,
-      ),
-    );
-  }
-  // Add this method to your _CommunicationHubContentState class
-  // Place it after _openInGoogleMaps and before _activateProtocol
 
   Future<void> _makePhoneCall(String phoneNumber, String serviceName) async {
     bool? confirmed = await showDialog<bool>(
@@ -2216,7 +2411,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     }
   }
 
-  // Show emergency numbers fallback when location search fails
   void _showEmergencyNumbersFallback(String placeType) {
     String emergencyNumber = '';
     String serviceName = '';
@@ -2320,130 +2514,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     }
   }
 
-  void _activateProtocol(String protocolName) {
-    showDialog(
-      context: context,
-      builder: (BuildContext context) {
-        return AlertDialog(
-          backgroundColor: const Color(0xFF1A2F3F),
-          title: Row(
-            children: [
-              Icon(Icons.warning, color: Colors.red),
-              SizedBox(width: 8),
-              Expanded(
-                child: Text(
-                  'Activate Protocol',
-                  style: TextStyle(color: Colors.white),
-                ),
-              ),
-            ],
-          ),
-          content: Text(
-            'Are you sure you want to activate:\n\n$protocolName',
-            style: TextStyle(color: Colors.white),
-          ),
-          actions: [
-            TextButton(
-              onPressed: () => Navigator.of(context).pop(),
-              child: Text('Cancel', style: TextStyle(color: Colors.white70)),
-            ),
-            ElevatedButton(
-              onPressed: () {
-                Navigator.of(context).pop();
-                _showSnackBar('$protocolName activated successfully');
-              },
-              style: ElevatedButton.styleFrom(
-                backgroundColor: Colors.red,
-                foregroundColor: Colors.white,
-              ),
-              child: Text('Activate'),
-            ),
-          ],
-        );
-      },
-    );
-  }
-
-  void _showLanguageSelector() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A2F3F),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            _langTile(englishName, englishCode, englishVoice),
-            _langTile(hindiName, hindiCode, hindiVoice),
-            _langTile(tamilName, tamilCode, tamilVoice),
-            _langTile(malayalamName, malayalamCode, malayalamVoice),
-            _langTile(teluguName, teluguCode, teluguVoice),
-          ],
-        );
-      },
-    );
-  }
-
-  Widget _langTile(String name, String code, String voice) {
-    return ListTile(
-      title: Text(name, style: const TextStyle(color: Colors.white)),
-      onTap: () {
-        setState(() {
-          selectedLangName = name;
-          selectedLangCode = code;
-          selectedVoice = voice;
-        });
-        Navigator.pop(context);
-      },
-    );
-  }
-
-  Future<void> _sendAudioToBackend(String filePath) async {
-    try {
-      final uri = Uri.parse(
-        "https://evok-functions.azurewebsites.net/api/voice_pipeline",
-      );
-
-      var request = http.MultipartRequest("POST", uri);
-
-      request.files.add(await http.MultipartFile.fromPath("audio", filePath));
-
-      // 🔹 Send selected language info
-      request.fields["target_lang"] = selectedLangCode;
-      request.fields["voice"] = selectedVoice;
-
-      final response = await request.send();
-
-      if (response.statusCode == 200) {
-        final bytes = await response.stream.toBytes();
-
-        final dir = await getTemporaryDirectory();
-        final outPath = "${dir.path}/translated.wav";
-
-        final file = File(outPath);
-        await file.writeAsBytes(bytes);
-
-        // ❌ Do not autoplay (as per your design)
-        // Audio will be forwarded to ESP32 later
-
-        _showSnackBar("Voice translated successfully");
-      } else {
-        _showSnackBar("Voice pipeline failed");
-      }
-    } catch (e) {
-      debugPrint("Pipeline error: $e");
-      _showSnackBar("Error sending voice");
-    }
-  }
-
-  Future<void> _playAudio(String path) async {
-    final player = FlutterSoundPlayer();
-    await player.openPlayer();
-    await player.startPlayer(fromURI: path, codec: Codec.pcm16WAV);
-  }
-
   @override
   Widget build(BuildContext context) {
     return SafeArea(
@@ -2545,73 +2615,23 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     );
   }
 
+  // ==================== NEW MESSAGING CONTENT ====================
   Widget _buildMessagingContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          Row(
-            children: [
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    _activateProtocol('Emergency Broadcast');
-                  },
-                  icon: const Icon(Icons.warning, size: 20),
-                  label: const Text('Emergency Broadcast'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: Colors.red,
-                    foregroundColor: Colors.white,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Expanded(
-                child: ElevatedButton.icon(
-                  onPressed: () {
-                    _activateProtocol('All-Worker Alert');
-                  },
-                  icon: const Icon(Icons.people, size: 20),
-                  label: const Text('All-Worker Alert'),
-                  style: ElevatedButton.styleFrom(
-                    backgroundColor: const Color(0xFF00FF41),
-                    foregroundColor: Colors.black,
-                    padding: const EdgeInsets.symmetric(vertical: 14),
-                  ),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+          // Language Selector
           const Text(
-            'Send Message',
+            'Audio Command Language',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 16),
-          const Text(
-            'Recipient',
-            style: TextStyle(fontSize: 14, color: Colors.white70),
-          ),
-          const SizedBox(height: 8),
-          SingleChildScrollView(
-            scrollDirection: Axis.horizontal,
-            child: Row(
-              children: [
-                _buildRecipientChip('All Workers', true),
-                const SizedBox(width: 8),
-                _buildRecipientChip('Marcus Johnson', false),
-                const SizedBox(width: 8),
-                _buildRecipientChip('Sarah', false),
-              ],
-            ),
-          ),
-          const SizedBox(height: 16),
+          const SizedBox(height: 12),
           GestureDetector(
             onTap: _showLanguageSelector,
             child: Container(
@@ -2619,148 +2639,86 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
               decoration: BoxDecoration(
                 color: const Color(0xFF1A3344),
                 borderRadius: BorderRadius.circular(10),
+                border: Border.all(
+                  color: Color(0xFF00FF41).withOpacity(0.3),
+                  width: 1,
+                ),
               ),
               child: Row(
                 children: [
-                  Icon(Icons.language, color: Color(0xFF00FF41), size: 20),
-                  SizedBox(width: 8),
-                  Text(
-                    selectedLangName,
-                    style: TextStyle(fontSize: 14, color: Colors.white),
+                  Icon(Icons.language, color: Color(0xFF00FF41), size: 24),
+                  SizedBox(width: 12),
+                  Expanded(
+                    child: Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        Text(
+                          selectedLangName,
+                          style: TextStyle(
+                            fontSize: 16,
+                            color: Colors.white,
+                            fontWeight: FontWeight.bold,
+                          ),
+                        ),
+                        Text(
+                          'Tap to change language',
+                          style: TextStyle(
+                            fontSize: 11,
+                            color: Colors.white54,
+                          ),
+                        ),
+                      ],
+                    ),
                   ),
-                  Spacer(),
                   Icon(Icons.arrow_drop_down, color: Colors.white54),
                 ],
               ),
             ),
           ),
           const SizedBox(height: 24),
-          Center(
-            child: Column(
-              children: [
-                GestureDetector(
-                  onTapDown: (_) async {
-                    setState(() => _isRecording = true);
 
-                    final dir = await getTemporaryDirectory();
-                    final path = '${dir.path}/voice.wav';
-
-                    await _recorder.startRecorder(
-                      toFile: path,
-                      codec: Codec.pcm16WAV,
-                      sampleRate: 16000,
-                      numChannels: 1,
-                    );
-                  },
-                  onTapUp: (_) async {
-                    setState(() => _isRecording = false);
-
-                    final path = await _recorder.stopRecorder();
-                    if (path != null) {
-                      await _sendAudioToBackend(path);
-                    }
-                  },
-                  child: AnimatedContainer(
-                    duration: const Duration(milliseconds: 200),
-                    width: _isRecording ? 120 : 100,
-                    height: _isRecording ? 120 : 100,
-                    decoration: BoxDecoration(
-                      shape: BoxShape.circle,
-                      color: const Color(0xFF1A3344),
-                      boxShadow: _isRecording
-                          ? [
-                              BoxShadow(
-                                color: Colors.white.withOpacity(0.7),
-                                blurRadius: 25,
-                                spreadRadius: 6,
-                              ),
-                            ]
-                          : [],
-                    ),
-                    child: const Icon(
-                      Icons.mic,
-                      color: Color(0xFF00FF41),
-                      size: 40,
-                    ),
-                  ),
-                ),
-                const SizedBox(height: 12),
-                Text(
-                  'Hold to record voice message',
-                  style: TextStyle(fontSize: 13, color: Colors.white70),
-                ),
-              ],
-            ),
-          ),
-          const SizedBox(height: 24),
-          Row(
-            children: [
-              Expanded(
-                child: Container(
-                  padding: const EdgeInsets.symmetric(horizontal: 16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A3344),
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                  child: TextField(
-                    controller: _messageController,
-                    style: const TextStyle(color: Colors.white),
-                    decoration: InputDecoration(
-                      hintText: 'Type your message here...',
-                      hintStyle: TextStyle(
-                        color: Colors.white.withOpacity(0.4),
-                      ),
-                      border: InputBorder.none,
-                      contentPadding: const EdgeInsets.symmetric(vertical: 14),
-                    ),
-                  ),
-                ),
-              ),
-              const SizedBox(width: 12),
-              Container(
-                decoration: const BoxDecoration(
-                  color: Color(0xFF00FF41),
-                  shape: BoxShape.circle,
-                ),
-                child: IconButton(
-                  onPressed: () {
-                    if (_messageController.text.isNotEmpty) {
-                      _showSnackBar('Message sent successfully');
-                      _messageController.clear();
-                    }
-                  },
-                  icon: const Icon(Icons.send, color: Colors.black),
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 24),
+          // Predefined Commands
           const Text(
-            'Recent Messages',
+            'Predefined Audio Commands',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
               color: Colors.white,
             ),
           ),
-          const SizedBox(height: 12),
-          _buildMessageCard(
-            type: 'ALERT',
-            message:
-                'Emergency evacuation protocol activated. Proceed to nearest exit immediately.',
-            recipient: 'All Workers',
-            time: '2 min ago',
-            typeColor: Colors.red,
-            statusColor: Colors.green,
+          const SizedBox(height: 4),
+          Text(
+            'Tap a command to broadcast it to all workers',
+            style: TextStyle(
+              fontSize: 12,
+              color: Colors.white.withOpacity(0.6),
+            ),
           ),
-          const SizedBox(height: 12),
-          _buildMessageCard(
-            type: 'VOICE',
-            message: 'Please report to safety station for medical checkup.',
-            recipient: 'Sarah Chen',
-            time: '5 min ago',
-            typeColor: Colors.blue,
-            statusColor: Colors.orange,
+          const SizedBox(height: 16),
+
+          // Command Grid
+          GridView.builder(
+            shrinkWrap: true,
+            physics: NeverScrollableScrollPhysics(),
+            gridDelegate: SliverGridDelegateWithFixedCrossAxisCount(
+              crossAxisCount: 2,
+              crossAxisSpacing: 12,
+              mainAxisSpacing: 12,
+              childAspectRatio: 1.1,
+            ),
+            itemCount: commands.length,
+            itemBuilder: (context, index) {
+              final command = commands[index];
+              return _buildCommandCard(
+                emoji: command['emoji'],
+                label: command['display'],
+                color: command['color'],
+                onTap: () => _sendAudioCommand(
+                  command['command'],
+                  command['display'],
+                ),
+              );
+            },
           ),
           const SizedBox(height: 20),
         ],
@@ -2768,6 +2726,76 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     );
   }
 
+  Widget _buildCommandCard({
+    required String emoji,
+    required String label,
+    required Color color,
+    required VoidCallback onTap,
+  }) {
+    return GestureDetector(
+      onTap: onTap,
+      child: Container(
+        decoration: BoxDecoration(
+          color: const Color(0xFF1A2F3F),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: color.withOpacity(0.3),
+            width: 2,
+          ),
+        ),
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              emoji,
+              style: TextStyle(fontSize: 40),
+            ),
+            SizedBox(height: 8),
+            Padding(
+              padding: const EdgeInsets.symmetric(horizontal: 8),
+              child: Text(
+                label,
+                textAlign: TextAlign.center,
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white,
+                  height: 1.2,
+                ),
+                maxLines: 2,
+                overflow: TextOverflow.ellipsis,
+              ),
+            ),
+            SizedBox(height: 8),
+            Container(
+              padding: EdgeInsets.symmetric(horizontal: 8, vertical: 4),
+              decoration: BoxDecoration(
+                color: color.withOpacity(0.2),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Row(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Icon(Icons.volume_up, color: color, size: 12),
+                  SizedBox(width: 4),
+                  Text(
+                    'Tap to send',
+                    style: TextStyle(
+                      fontSize: 10,
+                      color: color,
+                      fontWeight: FontWeight.bold,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
+
+  // ==================== EMERGENCY CONTENT (UNCHANGED) ====================
   Widget _buildEmergencyContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
@@ -2934,123 +2962,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     );
   }
 
-  Widget _buildRecipientChip(String label, bool isSelected) {
-    return Container(
-      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 10),
-      decoration: BoxDecoration(
-        color: isSelected ? const Color(0xFF00FF41) : const Color(0xFF1A3344),
-        borderRadius: BorderRadius.circular(20),
-      ),
-      child: Row(
-        mainAxisSize: MainAxisSize.min,
-        children: [
-          Icon(
-            Icons.people,
-            size: 16,
-            color: isSelected ? Colors.black : Colors.white70,
-          ),
-          const SizedBox(width: 6),
-          Text(
-            label,
-            style: TextStyle(
-              fontSize: 13,
-              color: isSelected ? Colors.black : Colors.white,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-            ),
-          ),
-        ],
-      ),
-    );
-  }
-
-  Widget _buildMessageCard({
-    required String type,
-    required String message,
-    required String recipient,
-    required String time,
-    required Color typeColor,
-    required Color statusColor,
-  }) {
-    return Container(
-      padding: const EdgeInsets.all(16),
-      decoration: BoxDecoration(
-        color: const Color(0xFF1A2F3F),
-        borderRadius: BorderRadius.circular(12),
-      ),
-      child: Column(
-        crossAxisAlignment: CrossAxisAlignment.start,
-        children: [
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Row(
-                children: [
-                  Icon(
-                    type == 'ALERT'
-                        ? Icons.warning
-                        : type == 'VOICE'
-                            ? Icons.volume_up
-                            : Icons.message,
-                    color: typeColor,
-                    size: 16,
-                  ),
-                  const SizedBox(width: 6),
-                  Text(
-                    type,
-                    style: TextStyle(
-                      fontSize: 11,
-                      fontWeight: FontWeight.bold,
-                      color: typeColor,
-                    ),
-                  ),
-                ],
-              ),
-              Container(
-                width: 8,
-                height: 8,
-                decoration: BoxDecoration(
-                  color: statusColor,
-                  shape: BoxShape.circle,
-                ),
-              ),
-            ],
-          ),
-          const SizedBox(height: 8),
-          Text(
-            message,
-            style: const TextStyle(
-              fontSize: 13,
-              color: Colors.white,
-              height: 1.4,
-            ),
-          ),
-          const SizedBox(height: 8),
-          Row(
-            mainAxisAlignment: MainAxisAlignment.spaceBetween,
-            children: [
-              Text(
-                recipient,
-                style: const TextStyle(
-                  fontSize: 12,
-                  color: Color(0xFF00FF41),
-                  fontWeight: FontWeight.w500,
-                ),
-              ),
-              Text(
-                time,
-                style: TextStyle(
-                  fontSize: 11,
-                  color: Colors.white.withOpacity(0.5),
-                ),
-              ),
-            ],
-          ),
-        ],
-      ),
-    );
-  }
-
-  // FIXED: Added onTap parameter
   Widget _buildEmergencyCard(
     String emoji,
     String title,
@@ -3093,7 +3004,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
               shape: BoxShape.circle,
             ),
             child: IconButton(
-              onPressed: onTap, // FIXED: Using the onTap parameter
+              onPressed: onTap,
               icon: const Icon(Icons.phone, color: Colors.white, size: 20),
               padding: const EdgeInsets.all(10),
             ),
@@ -3159,7 +3070,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     );
   }
 }
-
 // ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
 // ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
 
