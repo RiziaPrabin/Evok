@@ -3138,11 +3138,16 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
   }
 
   // ==================== EMERGENCY CONTENT (UNCHANGED) ====================
+  // ... [Keep all imports and Messaging logic exactly as they were] ...
+
+  // ==================== EMERGENCY CONTENT ====================
+  // ==================== EMERGENCY CONTENT (UPDATED) ====================
   Widget _buildEmergencyContent() {
     return SingleChildScrollView(
       padding: const EdgeInsets.symmetric(horizontal: 20),
       child: Column(
         children: [
+          // Header (Address Display)
           Container(
             padding: const EdgeInsets.all(20),
             decoration: BoxDecoration(
@@ -3156,18 +3161,15 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
                 const Text(
                   'Emergency Response',
                   style: TextStyle(
-                    fontSize: 22,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+                      fontSize: 22,
+                      fontWeight: FontWeight.bold,
+                      color: Colors.white),
                 ),
                 const SizedBox(height: 4),
                 Text(
-                  'Quick access to emergency services',
+                  'Direct Dial & Proximity Search',
                   style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
+                      fontSize: 13, color: Colors.white.withOpacity(0.6)),
                 ),
                 if (_currentAddress.isNotEmpty) ...[
                   const SizedBox(height: 12),
@@ -3180,19 +3182,14 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
                     child: Row(
                       mainAxisSize: MainAxisSize.min,
                       children: [
-                        Icon(
-                          Icons.location_on,
-                          color: Color(0xFF00FF41),
-                          size: 16,
-                        ),
-                        SizedBox(width: 6),
+                        const Icon(Icons.location_on,
+                            color: Color(0xFF00FF41), size: 16),
+                        const SizedBox(width: 6),
                         Flexible(
                           child: Text(
                             _currentAddress,
-                            style: TextStyle(
-                              fontSize: 11,
-                              color: Color(0xFF00FF41),
-                            ),
+                            style: const TextStyle(
+                                fontSize: 11, color: Color(0xFF00FF41)),
                             textAlign: TextAlign.center,
                           ),
                         ),
@@ -3204,25 +3201,31 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
             ),
           ),
           const SizedBox(height: 24),
+
+          // Primary Emergency Grid
           Row(
             children: [
               Expanded(
                 child: _buildEmergencyCard(
                   '🚒',
-                  'Fire Department',
-                  'Nearest',
-                  onTap: () =>
-                      _callNearestService('fire_station', 'Fire Department'),
+                  'Fire Dept.',
+                  '101',
+                  onCall: () =>
+                      _makePhoneCall('101', 'Fire Department'), // Dials 101
+                  onLocate: () => _callNearestService('fire_station',
+                      'Fire Department'), // Existing Search Logic
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildEmergencyCard(
                   '👮',
-                  'Police Emergency',
-                  'Nearest',
-                  onTap: () =>
-                      _callNearestService('police', 'Police Emergency'),
+                  'Police',
+                  '100',
+                  onCall: () =>
+                      _makePhoneCall('100', 'Police Emergency'), // Dials 100
+                  onLocate: () => _callNearestService(
+                      'police', 'Police Emergency'), // Existing Search Logic
                 ),
               ),
             ],
@@ -3233,20 +3236,22 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
               Expanded(
                 child: _buildEmergencyCard(
                   '🚑',
-                  'Medical Emergency',
-                  'Nearest',
-                  onTap: () =>
-                      _callNearestService('hospital', 'Medical Emergency'),
+                  'Ambulance',
+                  '108',
+                  onCall: () =>
+                      _makePhoneCall('108', 'Medical Emergency'), // Dials 108
+                  onLocate: () => _callNearestService(
+                      'hospital', 'Medical Emergency'), // Existing Search Logic
                 ),
               ),
               const SizedBox(width: 12),
               Expanded(
                 child: _buildEmergencyCard(
                   '🏢',
-                  'Mine Safety Office',
-                  '+1234567890',
-                  onTap: () =>
-                      _makePhoneCall('+1234567890', 'Mine Safety Office'),
+                  'Safety Office',
+                  'SITE-HQ',
+                  onCall: () =>
+                      _makePhoneCall('+911123456789', 'Mine Safety Office'),
                 ),
               ),
             ],
@@ -3255,23 +3260,23 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
           SizedBox(
             width: double.infinity,
             child: _buildEmergencyCard(
-              '🏢',
-              'Site Manager',
-              '+0987654321',
+              '👷',
+              'Site Manager (Urgent)',
+              '+91 9876543210',
               isFullWidth: true,
-              onTap: () => _makePhoneCall('+0987654321', 'Site Manager'),
+              onCall: () => _makePhoneCall('+919876543210', 'Site Manager'),
             ),
           ),
+
           const SizedBox(height: 24),
           const Align(
             alignment: Alignment.centerLeft,
             child: Text(
               'Emergency Protocols',
               style: TextStyle(
-                fontSize: 18,
-                fontWeight: FontWeight.bold,
-                color: Colors.white,
-              ),
+                  fontSize: 18,
+                  fontWeight: FontWeight.bold,
+                  color: Colors.white),
             ),
           ),
           const SizedBox(height: 12),
@@ -3282,37 +3287,23 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
             subtitle: 'Activate immediate evacuation alert',
             onTap: () => _activateProtocol('Site-Wide Evacuation'),
           ),
-          const SizedBox(height: 12),
-          _buildProtocolCard(
-            icon: Icons.medical_services,
-            iconColor: Colors.orange,
-            title: 'Medical Emergency Response',
-            subtitle: 'Coordinate medical assistance',
-            onTap: () => _activateProtocol('Medical Emergency Response'),
-          ),
-          const SizedBox(height: 12),
-          _buildProtocolCard(
-            icon: Icons.lock,
-            iconColor: Colors.blue,
-            title: 'Safety Lockdown',
-            subtitle: 'Secure area and halt operations',
-            onTap: () => _activateProtocol('Safety Lockdown'),
-          ),
           const SizedBox(height: 20),
         ],
       ),
     );
   }
 
+  // UPDATED CARD WIDGET: Dual-action for Dial and Locate
   Widget _buildEmergencyCard(
     String emoji,
     String title,
     String number, {
     bool isFullWidth = false,
-    required VoidCallback onTap,
+    required VoidCallback onCall,
+    VoidCallback? onLocate, // Optional locator button
   }) {
     return Container(
-      padding: const EdgeInsets.all(20),
+      padding: const EdgeInsets.all(16),
       decoration: BoxDecoration(
         color: const Color(0xFF1A2F3F),
         borderRadius: BorderRadius.circular(12),
@@ -3320,41 +3311,65 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       ),
       child: Column(
         children: [
-          Text(emoji, style: const TextStyle(fontSize: 40)),
+          Text(emoji, style: const TextStyle(fontSize: 32)),
           const SizedBox(height: 8),
           Text(
             title,
             textAlign: TextAlign.center,
             style: const TextStyle(
-              fontSize: 13,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
+                fontSize: 13, fontWeight: FontWeight.bold, color: Colors.white),
           ),
-          const SizedBox(height: 4),
           Text(
             number,
-            style: TextStyle(
-              fontSize: 11,
-              color: Colors.white.withOpacity(0.6),
-            ),
+            style: const TextStyle(fontSize: 11, color: Colors.white54),
           ),
           const SizedBox(height: 12),
-          Container(
-            decoration: const BoxDecoration(
-              color: Colors.red,
-              shape: BoxShape.circle,
-            ),
-            child: IconButton(
-              onPressed: onTap,
-              icon: const Icon(Icons.phone, color: Colors.white, size: 20),
-              padding: const EdgeInsets.all(10),
-            ),
+          Row(
+            mainAxisAlignment: MainAxisAlignment.center,
+            children: [
+              // ACTION 1: Direct Phone Call
+              GestureDetector(
+                onTap: onCall,
+                child: Container(
+                  padding: const EdgeInsets.all(10),
+                  decoration: const BoxDecoration(
+                      color: Colors.red, shape: BoxShape.circle),
+                  child: const Icon(Icons.phone, color: Colors.white, size: 20),
+                ),
+              ),
+              // ACTION 2: Location Search (If provided)
+              if (onLocate != null) ...[
+                const SizedBox(width: 15),
+                GestureDetector(
+                  onTap: onLocate,
+                  child: Container(
+                    padding: const EdgeInsets.all(10),
+                    decoration: BoxDecoration(
+                      color: const Color(0xFF00FF41).withOpacity(0.2),
+                      shape: BoxShape.circle,
+                      border:
+                          Border.all(color: const Color(0xFF00FF41), width: 1),
+                    ),
+                    child: const Icon(Icons.my_location,
+                        color: Color(0xFF00FF41), size: 20),
+                  ),
+                ),
+              ],
+            ],
           ),
+          if (onLocate != null)
+            const Padding(
+              padding: EdgeInsets.only(top: 8.0),
+              child: Text(
+                'Dial   |   Locate',
+                style: TextStyle(fontSize: 9, color: Colors.white38),
+              ),
+            ),
         ],
       ),
     );
   }
+// ... [Keep _buildEmergencyCard and all other helper methods exactly as they were] ...
 
   Widget _buildProtocolCard({
     required IconData icon,
