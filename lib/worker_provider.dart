@@ -1,7 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'worker_model.dart';
-import 'alert_sound_service.dart'; // ✅ Add this import
+import 'alert_sound_service.dart';
 
 class WorkerProvider extends ChangeNotifier {
   final DatabaseReference _rootRef = FirebaseDatabase.instance.ref(
@@ -10,6 +10,9 @@ class WorkerProvider extends ChangeNotifier {
 
   final AlertSoundService _alertSound = AlertSoundService();
   final Map<String, int> _previousPanicStates = {};
+
+  // ✅ Store leader's oxygen value to share with worker
+  int _leaderOxygenRate = 0;
 
   List<Worker> _workers = [
     Worker(
@@ -33,8 +36,9 @@ class WorkerProvider extends ChangeNotifier {
   ];
 
   WorkerProvider() {
-    _listenWorker();
+    // ✅ Start listening to Leader FIRST to get oxygen value
     _listenLeader();
+    _listenWorker();
   }
 
   List<Worker> get workers => _workers;
@@ -61,6 +65,7 @@ class WorkerProvider extends ChangeNotifier {
           int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0;
 
       debugPrint("🔥 Marcus AccelX = $accel, Panic = $panic");
+      debugPrint("🔥 Marcus using Leader's O2 = $_leaderOxygenRate");
 
       _updateWorker(
         vestId: "VEST-001",
@@ -75,7 +80,7 @@ class WorkerProvider extends ChangeNotifier {
             0.0,
         gas: int.tryParse(event.snapshot.child('Gas').value.toString()) ?? 0,
         accelX: accel,
-        oxygenRate: 0,
+        oxygenRate: _leaderOxygenRate, // ✅ Use leader's oxygen value
       );
     });
   }
@@ -91,8 +96,17 @@ class WorkerProvider extends ChangeNotifier {
       final panic =
           int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0;
 
-      debugPrint("🔥 Sarah AccelX = $accel, Panic = $panic");
+      final oxygenRate =
+          int.tryParse(event.snapshot.child('O2').value.toString()) ?? 0;
 
+      // ✅ Update the stored oxygen value
+      _leaderOxygenRate = oxygenRate;
+
+      debugPrint("🔥 Sarah AccelX = $accel, Panic = $panic");
+      debugPrint("🔥 Sarah O2 from Firebase = $oxygenRate");
+      debugPrint("🔥 Updated _leaderOxygenRate = $_leaderOxygenRate");
+
+      // ✅ Update Leader (Sarah)
       _updateWorker(
         vestId: "VEST-002",
         bpm: 0,
@@ -106,9 +120,17 @@ class WorkerProvider extends ChangeNotifier {
             0.0,
         gas: int.tryParse(event.snapshot.child('Gas').value.toString()) ?? 0,
         accelX: accel,
-        oxygenRate:
-            int.tryParse(event.snapshot.child('O2').value.toString()) ?? 0,
+        oxygenRate: oxygenRate,
       );
+
+      // ✅ ALSO update Marcus (Worker) with the same oxygen value
+      final workerIndex = _workers.indexWhere((w) => w.vestId == "VEST-001");
+      if (workerIndex != -1) {
+        _workers[workerIndex] = _workers[workerIndex].copyWith(
+          oxygenRate: _leaderOxygenRate,
+        );
+        debugPrint("🔥 FORCE Updated Marcus oxygen to: $_leaderOxygenRate");
+      }
     });
   }
 
@@ -151,6 +173,7 @@ class WorkerProvider extends ChangeNotifier {
     );
 
     notifyListeners();
+
     // ✅ PLAY/STOP ALERT SOUND BASED ON PANIC STATE
     if (isNewAlert) {
       debugPrint("🚨 NEW PANIC ALERT for $vestId - STARTING SOUND");

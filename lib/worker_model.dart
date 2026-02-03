@@ -19,8 +19,11 @@ class Worker {
   final double longitude;
   final DateTime? lastUpdated;
   final int gasRate;
-  final double accelX;
   final int oxygenRate;
+  final double accelX;
+  final double accelY; // Added for 3D fall detection
+  final double accelZ; // Added for 3D fall detection
+  final int panic;
   Worker({
     required this.name,
     required this.id,
@@ -39,6 +42,9 @@ class Worker {
     this.lastUpdated,
     this.gasRate = 0,
     this.accelX = 0.0,
+    this.accelY = 0.0,
+    this.accelZ = 0.0,
+    this.panic = 0,
     this.oxygenRate = 0,
   });
 
@@ -53,6 +59,9 @@ class Worker {
     Color? statusColor,
     int? gasRate,
     double? accelX,
+    double? accelY,
+    double? accelZ,
+    int? panic,
     int? oxygenRate,
   }) {
     return Worker(
@@ -73,6 +82,9 @@ class Worker {
       statusColor: statusColor ?? this.statusColor,
       gasRate: gasRate ?? this.gasRate,
       accelX: accelX ?? this.accelX,
+      accelY: accelY ?? this.accelY,
+      accelZ: accelZ ?? this.accelZ,
+      panic: panic ?? this.panic,
       oxygenRate: oxygenRate ?? this.oxygenRate,
     );
   }

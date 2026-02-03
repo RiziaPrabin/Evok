@@ -17,7 +17,9 @@ import 'live_mine_map.dart';
 import 'package:firebase_database/firebase_database.dart';
 import 'package:firebase_core/firebase_core.dart';
 import 'live_tracking_page.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:math' as math;
+import 'alert_sound_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1495,7 +1497,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
   String _currentAddress = "";
 
   // Language selection
-  String selectedLangName = "Hindi";
+  /*String selectedLangName = "Hindi";
   String selectedLangCode = "hi";
 
   // Available languages
@@ -1505,7 +1507,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     "Tamil": "ta",
     "Malayalam": "ml",
     "Telugu": "te",
-  };
+  };*/
 
   // Predefined commands with emojis
   final List<Map<String, dynamic>> commands = [
@@ -1612,11 +1614,11 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     try {
       await _audioCommandRef.set({
         'command': command,
-        'language': selectedLangCode,
+        // 'language': selectedLangCode,
         'timestamp': DateTime.now().toIso8601String(),
       });
 
-      _showSnackBar('Command "$displayText" sent in $selectedLangName');
+      // _showSnackBar('Command "$displayText" sent in $selectedLangName');
 
       // Show confirmation dialog
       _showCommandConfirmation(displayText, command);
@@ -1676,11 +1678,11 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
                       ),
                     ),
                     SizedBox(height: 4),
-                    Text(
+                    /*Text(
                       'Language: $selectedLangName',
                       style: TextStyle(color: Colors.white70, fontSize: 12),
                     ),
-                    SizedBox(height: 4),
+                    SizedBox(height: 4),*/
                     Text(
                       'Command: $command',
                       style: TextStyle(color: Colors.white54, fontSize: 11),
@@ -1711,7 +1713,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       }
     });
   }
-
+/*
   void _showLanguageSelector() {
     showModalBottomSheet(
       context: context,
@@ -1770,7 +1772,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
         );
       },
     );
-  }
+  }*/
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2623,7 +2625,7 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
           // Language Selector
-          const Text(
+          /* const Text(
             'Audio Command Language',
             style: TextStyle(
               fontSize: 18,
@@ -2675,11 +2677,11 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
               ),
             ),
           ),
-          const SizedBox(height: 24),
+          const SizedBox(height: 24),*/
 
           // Predefined Commands
           const Text(
-            'Predefined Audio Commands',
+            'Audio Commands',
             style: TextStyle(
               fontSize: 18,
               fontWeight: FontWeight.bold,
@@ -3072,6 +3074,8 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
 }
 // ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
 // ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
+// ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
+// ==================== 5. ANALYTICS DASHBOARD CONTENT ====================
 
 /// ===== ANIMATED VITAL CARD =====
 class AnalyticsDashboardContent extends StatefulWidget {
@@ -3086,15 +3090,125 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
     with SingleTickerProviderStateMixin {
   String? selectedVestId; // Keep this as nullable
   late AnimationController _rotationController;
-  bool _isInitialized = false; // ✅ Add this flag
+  bool _isInitialized = false;
+  bool _wasFallDetected = false; // ✅ Add this flag
+
+  Worker? selectedWorker; // 🔹 Add this line to fix the getter/setter errors
+
+  final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin =
+      FlutterLocalNotificationsPlugin();
+  // 1. Logic to convert AccelX number into "Stable" or "FALL!"
+  String _getFallStatus(double x, double y, double z) {
+    if (x.isNaN || y.isNaN || z.isNaN || (x == 0 && y == 0 && z == 0))
+      return "Stable";
+
+    // Calculate total resultant acceleration
+    double magnitude = math.sqrt(x * x + y * y + z * z);
+
+    // Threshold matching your friend's Arduino '2.5G' logic
+    // If your sensor gives m/s², use 25.0. If it gives Gs, use 2.5.
+    if (magnitude > 25.0 || magnitude < 2.0) {
+      return "FALL DETECTED!";
+    }
+    return "Stable";
+  }
+
+  // 2. Updated: Accepts 3 arguments (X, Y, Z)
+  Color _getFallColor(double x, double y, double z) {
+    if (x.isNaN || y.isNaN || z.isNaN || (x == 0 && y == 0 && z == 0))
+      return Colors.purple;
+
+    double magnitude = math.sqrt(x * x + y * y + z * z);
+
+    if (magnitude > 25.0 || magnitude < 2.0) {
+      return Colors.red; // Alert color
+    }
+    return Colors.purple; // Normal color
+  }
 
   @override
   void initState() {
     super.initState();
+    _initializeNotifications();
 
     _rotationController =
         AnimationController(vsync: this, duration: const Duration(seconds: 12))
           ..repeat();
+
+    DatabaseReference workerRef =
+        FirebaseDatabase.instance.ref("EVOK_System/Live_Data/Worker");
+    workerRef.onValue.listen((DatabaseEvent event) {
+      final data = event.snapshot.value as Map<dynamic, dynamic>?;
+
+      if (data != null) {
+        setState(() {
+          // 1. Get current status from Arduino Server
+          int currentPanic = data['Panic'] ?? 0;
+
+          // 2. Fetch 3D Accel values to calculate fall locally
+          // Note: Check if your friend is using 'Accel' or 'accel' in Firebase
+          double x = (data['Accel']?['X'] ?? 0.0).toDouble();
+          double y = (data['Accel']?['Y'] ?? 0.0).toDouble();
+          double z = (data['Accel']?['Z'] ?? 0.0).toDouble();
+
+          double magnitude = math.sqrt(x * x + y * y + z * z);
+
+          // 3. Logic: If Server flags Panic OR local math detects high impact
+          bool isFalling =
+              (currentPanic == 1) || (magnitude > 25.0 || magnitude < 2.0);
+
+          // 4. Trigger the Sound/Notification ONLY once per event
+          if (isFalling && !_wasFallDetected) {
+            _showFallNotification();
+            _wasFallDetected = true;
+          } else if (!isFalling) {
+            _wasFallDetected = false; // Reset so it can trigger again later
+          }
+
+          // 5. Update your selectedWorker so the UI Gauges move
+          if (selectedWorker != null) {
+            selectedWorker = selectedWorker!.copyWith(
+              heartRate: data['HeartRate'] ?? 0,
+              spo2: data['SpO2'] ?? 0,
+              temperature: (data['BodyTemp'] ?? 0.0).toDouble(),
+              accelX: x,
+              accelY: y,
+              accelZ: z,
+              panic: currentPanic,
+            );
+          }
+        });
+      }
+    });
+  }
+
+  void _initializeNotifications() async {
+    const AndroidInitializationSettings initializationSettingsAndroid =
+        AndroidInitializationSettings('@mipmap/ic_launcher');
+    const InitializationSettings initializationSettings =
+        InitializationSettings(android: initializationSettingsAndroid);
+    await flutterLocalNotificationsPlugin.initialize(initializationSettings);
+  }
+
+  Future<void> _showFallNotification() async {
+    const AndroidNotificationDetails androidPlatformChannelSpecifics =
+        AndroidNotificationDetails(
+      'fall_alert_channel', // ID
+      'Fall Alerts', // Name
+      importance: Importance.max,
+      priority: Priority.high,
+      playSound: true, // 🔥 Enables Sound
+      enableVibration: true,
+    );
+    const NotificationDetails platformChannelSpecifics =
+        NotificationDetails(android: androidPlatformChannelSpecifics);
+
+    await flutterLocalNotificationsPlugin.show(
+      0,
+      '⚠️ FALL DETECTED!',
+      'A worker has fallen. Immediate action required.',
+      platformChannelSpecifics,
+    );
   }
 
   @override
@@ -3116,7 +3230,6 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
           );
         }
 
-        // ✅ FIX: Initialize selectedVestId on first build
         if (!_isInitialized && workers.isNotEmpty) {
           selectedVestId = workers.first.vestId;
           _isInitialized = true;
@@ -3235,59 +3348,61 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
                     _animatedVitalCard(Icons.bloodtype,
                         "${selectedWorker.oxygenRate}", "Oxygen", Colors.cyan),
                     _animatedVitalCard(
-                        Icons.cloud,
-                        "${selectedWorker.gasRate} ppm",
-                        "Gas Level",
-                        Colors.green),
+                      Icons.cloud,
+                      "${selectedWorker.gasRate} PPM", // Unit updated to uppercase PPM
+                      "Gas",
+                      selectedWorker.gasRate > 400
+                          ? Colors.orange
+                          : Colors.green, // Dynamic color
+                    ),
+
                     _animatedVitalCard(
-                        Icons.screen_rotation,
-                        (selectedWorker.accelX.isNaN
-                                ? 0.0
-                                : selectedWorker.accelX)
-                            .toStringAsFixed(2),
-                        "Accel-X",
-                        Colors.purple),
-                  ],
-                ),
+                      Icons.screen_rotation,
+                      _getFallStatus(selectedWorker.accelX,
+                          selectedWorker.accelY, selectedWorker.accelZ),
+                      "Fall Status",
+                      _getFallColor(selectedWorker.accelX,
+                          selectedWorker.accelY, selectedWorker.accelZ),
+                    ),
 
-                const SizedBox(height: 20),
-
-                /// LOCATION
-                Container(
-                  padding: const EdgeInsets.all(16),
-                  decoration: BoxDecoration(
-                    color: const Color(0xFF1A2F3F),
-                    borderRadius: BorderRadius.circular(12),
-                  ),
-                  child: Row(
-                    children: [
-                      const Icon(Icons.location_on, color: Colors.white70),
-                      const SizedBox(width: 8),
-                      Expanded(
-                        child: Text(
-                          selectedWorker.latitude == 0
-                              ? selectedWorker.location
-                              : "Lat: ${selectedWorker.latitude.toStringAsFixed(5)}, "
-                                  "Lng: ${selectedWorker.longitude.toStringAsFixed(5)}",
-                          style: const TextStyle(color: Colors.white),
-                        ),
+                    /// LOCATION
+                    Container(
+                      padding: const EdgeInsets.all(16),
+                      decoration: BoxDecoration(
+                        color: const Color(0xFF1A2F3F),
+                        borderRadius: BorderRadius.circular(12),
                       ),
-                    ],
-                  ),
-                ),
+                      child: Row(
+                        children: [
+                          const Icon(Icons.location_on, color: Colors.white70),
+                          const SizedBox(width: 8),
+                          Expanded(
+                            child: Text(
+                              selectedWorker.latitude == 0
+                                  ? selectedWorker.location
+                                  : "Lat: ${selectedWorker.latitude.toStringAsFixed(5)}, "
+                                      "Lng: ${selectedWorker.longitude.toStringAsFixed(5)}",
+                              style: const TextStyle(color: Colors.white),
+                            ),
+                          ),
+                        ],
+                      ),
+                    ),
 
-                const SizedBox(height: 12),
+                    const SizedBox(height: 12),
 
-                /// STATUS
-                Row(
-                  children: [
-                    const Text("Status: ",
-                        style: TextStyle(color: Colors.white70)),
-                    Text(
-                      selectedWorker.status,
-                      style: TextStyle(
-                          fontWeight: FontWeight.bold,
-                          color: selectedWorker.statusColor),
+                    /// STATUS
+                    Row(
+                      children: [
+                        const Text("Status: ",
+                            style: TextStyle(color: Colors.white70)),
+                        Text(
+                          selectedWorker.status,
+                          style: TextStyle(
+                              fontWeight: FontWeight.bold,
+                              color: selectedWorker.statusColor),
+                        ),
+                      ],
                     ),
                   ],
                 ),
