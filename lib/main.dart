@@ -20,6 +20,7 @@ import 'live_tracking_page.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'dart:math' as math;
 import 'alert_sound_service.dart';
+import 'alert_threshold_service.dart';
 
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
@@ -1121,6 +1122,7 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
 }
 
 // ==================== 3. SAFETY ALERTS CONTENT ====================
+
 class SafetyAlertsContent extends StatefulWidget {
   const SafetyAlertsContent({Key? key}) : super(key: key);
 
@@ -1129,204 +1131,424 @@ class SafetyAlertsContent extends StatefulWidget {
 }
 
 class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
-  String _selectedFilter = 'All';
+  String _selectedFilter = 'Active';
 
   @override
   Widget build(BuildContext context) {
-    return SafeArea(
-      child: Column(
-        children: [
-          Container(
-            padding: const EdgeInsets.all(20),
-            child: Column(
-              crossAxisAlignment: CrossAxisAlignment.start,
-              children: [
-                const Text(
-                  'Safety Alerts',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
+    return Consumer<WorkerProvider>(
+      builder: (context, workerProvider, child) {
+        // ✅ Generate alerts IMMEDIATELY from current worker state
+        final alerts = _generateAlertsFromWorkers(workerProvider);
+
+        // Filter alerts based on selected filter
+        final filteredAlerts = _filterAlerts(alerts, _selectedFilter);
+
+        // Count alerts by status
+        final activeCount = alerts.where((a) => a['status'] == 'ACTIVE').length;
+        final resolvedCount =
+            alerts.where((a) => a['status'] == 'RESOLVED').length;
+
+        return SafeArea(
+          child: Column(
+            children: [
+              Container(
+                padding: const EdgeInsets.all(20),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Text(
+                      'Safety Alerts',
+                      style: TextStyle(
+                        fontSize: 24,
+                        fontWeight: FontWeight.bold,
+                        color: Colors.white,
+                      ),
+                    ),
+                    const SizedBox(height: 4),
+                    Text(
+                      'Real-time Worker Safety Monitoring',
+                      style: TextStyle(
+                        fontSize: 13,
+                        color: Colors.white.withOpacity(0.6),
+                      ),
+                    ),
+                  ],
                 ),
-                const SizedBox(height: 4),
-                Text(
-                  'Real-time Worker Safety Monitoring',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
+              ),
+
+              // ✅ ONLY 2 NAVIGATION TABS: ACTIVE & RESOLVED
+              Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 20),
+                child: Row(
+                  children: [
+                    Expanded(
+                      child: _buildFilterTab(
+                        label: 'Active',
+                        count: activeCount,
+                        color: Colors.red,
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Expanded(
+                      child: _buildFilterTab(
+                        label: 'Resolved',
+                        count: resolvedCount,
+                        color: const Color(0xFF00FF41),
+                      ),
+                    ),
+                  ],
                 ),
-              ],
-            ),
+              ),
+
+              const SizedBox(height: 20),
+
+              Expanded(
+                child: filteredAlerts.isEmpty
+                    ? Center(
+                        child: Column(
+                          mainAxisAlignment: MainAxisAlignment.center,
+                          children: [
+                            Icon(
+                              _selectedFilter == 'Active'
+                                  ? Icons.check_circle_outline
+                                  : Icons.history,
+                              size: 64,
+                              color: Colors.white.withOpacity(0.3),
+                            ),
+                            const SizedBox(height: 16),
+                            Text(
+                              _selectedFilter == 'Active'
+                                  ? 'No active alerts'
+                                  : 'No resolved alerts',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.5),
+                                fontSize: 16,
+                                fontWeight: FontWeight.w500,
+                              ),
+                            ),
+                            const SizedBox(height: 8),
+                            Text(
+                              _selectedFilter == 'Active'
+                                  ? 'All workers are safe'
+                                  : 'No alerts have been resolved yet',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.3),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
+                        ),
+                      )
+                    : ListView.builder(
+                        padding: const EdgeInsets.symmetric(horizontal: 20),
+                        itemCount: filteredAlerts.length,
+                        itemBuilder: (context, index) {
+                          final alert = filteredAlerts[index];
+                          return Padding(
+                            padding: const EdgeInsets.only(bottom: 16),
+                            child: _buildAlertCard(
+                              context: context,
+                              alert: alert,
+                              workerProvider: workerProvider,
+                            ),
+                          );
+                        },
+                      ),
+              ),
+            ],
           ),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              mainAxisAlignment: MainAxisAlignment.spaceAround,
-              children: [
-                _buildStatItem('1', 'Active', Colors.red),
-                _buildStatItem('2', 'Critical', Colors.orange),
-                _buildStatItem('1', 'Resolved', const Color(0xFF00FF41)),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Padding(
-            padding: const EdgeInsets.symmetric(horizontal: 20),
-            child: Row(
-              children: [
-                _buildFilterTab('All'),
-                const SizedBox(width: 12),
-                _buildFilterTab('Active'),
-                const SizedBox(width: 12),
-                _buildFilterTab('Critical'),
-              ],
-            ),
-          ),
-          const SizedBox(height: 20),
-          Expanded(
-            child: ListView(
-              padding: const EdgeInsets.symmetric(horizontal: 20),
-              children: [
-                _buildAlertCard(
-                  type: 'BIOMETRIC ALERT',
-                  title:
-                      'Critical SpO₂ levels detected - immediate attention required',
-                  workerName: 'Sarah Chen',
-                  vestId: 'VEST-002',
-                  location: 'Tunnel B-1',
-                  time: '2 min ago',
-                  status: 'ACTIVE',
-                  statusColor: Colors.red,
-                  cardColor: Colors.red,
-                  icon: Icons.favorite,
-                  vitals: '95 BPM    99.2°F    89% SpO₂',
-                  showAcknowledge: true,
-                  showResolve: true,
-                ),
-                const SizedBox(height: 16),
-                _buildAlertCard(
-                  type: 'PANIC ALERT',
-                  title: 'Emergency panic button activated',
-                  workerName: 'Marcus Johnson',
-                  vestId: 'VEST-001',
-                  location: 'Tunnel A-2',
-                  time: '5 min ago',
-                  status: 'ACKNOWLEDGED',
-                  statusColor: Colors.orange,
-                  cardColor: Colors.red,
-                  icon: Icons.pan_tool,
-                  showResolve: true,
-                ),
-                const SizedBox(height: 16),
-                _buildAlertCard(
-                  type: 'FALL ALERT',
-                  title:
-                      'Fall detection triggered - worker may need assistance',
-                  workerName: 'David Rodriguez',
-                  vestId: 'VEST-003',
-                  location: 'Central Hub',
-                  time: '12 min ago',
-                  status: 'RESOLVED',
-                  statusColor: const Color(0xFF00FF41),
-                  cardColor: Colors.orange,
-                  icon: Icons.trending_down,
-                ),
-                const SizedBox(height: 16),
-                _buildAlertCard(
-                  type: 'ENVIRONMENTAL ALERT',
-                  title: 'High temperature zone detected',
-                  workerName: 'Emily Watson',
-                  vestId: 'VEST-004',
-                  location: 'Tunnel C-3',
-                  time: '18 min ago',
-                  status: 'ACKNOWLEDGED',
-                  statusColor: Colors.orange,
-                  cardColor: Colors.orange[800]!,
-                  icon: Icons.thermostat,
-                  vitals: '104.5°F',
-                  showResolve: true,
-                ),
-                const SizedBox(height: 20),
-              ],
-            ),
-          ),
-        ],
-      ),
+        );
+      },
     );
   }
 
-  Widget _buildStatItem(String value, String label, Color color) {
-    return Column(
-      children: [
-        Text(
-          value,
-          style: TextStyle(
-            fontSize: 32,
-            fontWeight: FontWeight.bold,
-            color: color,
-          ),
-        ),
-        const SizedBox(height: 4),
-        Text(
-          label,
-          style: TextStyle(fontSize: 12, color: Colors.white.withOpacity(0.6)),
-        ),
-      ],
-    );
-  }
+  List<Map<String, dynamic>> _generateAlertsFromWorkers(
+      WorkerProvider provider) {
+    final alerts = <Map<String, dynamic>>[];
 
-  Widget _buildFilterTab(String label) {
-    bool isSelected = _selectedFilter == label;
-    return Expanded(
-      child: GestureDetector(
-        onTap: () {
-          setState(() {
-            _selectedFilter = label;
+    for (final worker in provider.workers) {
+      // ✅ ONLY SHOW MARCUS JOHNSON (VEST-001) ALERTS
+      if (worker.vestId != 'VEST-001') {
+        continue;
+      }
+
+      // ✅ Get ACTIVE alerts from threshold service
+      final activeAlerts = provider.getWorkerAlerts(worker.vestId);
+
+      // ✅ Get RESOLVED alerts from threshold service
+      final resolvedAlerts = provider.getResolvedAlerts(worker.vestId);
+
+      // ✅ Generate cards for ACTIVE alerts
+      for (final alertType in activeAlerts) {
+        alerts.add({
+          'type': AlertThresholdService.getAlertDisplayName(alertType),
+          'alertType': alertType,
+          'title': _getAlertTitle(alertType, worker),
+          'workerName': worker.name,
+          'vestId': worker.vestId,
+          'location': worker.location,
+          'time': _getTimeAgo(worker.lastUpdated),
+          'status': 'ACTIVE',
+          'severity': _getAlertSeverity(alertType),
+          'statusColor': AlertThresholdService.getAlertColor(alertType),
+          'cardColor': AlertThresholdService.getAlertColor(alertType),
+          'icon': AlertThresholdService.getAlertIcon(alertType),
+          'vitals': _getVitalsString(worker, alertType),
+          'worker': worker,
+        });
+      }
+
+      // ✅ Generate cards for RESOLVED alerts
+      for (final alertType in resolvedAlerts) {
+        // Don't show if it's also in active (means it triggered again)
+        if (!activeAlerts.contains(alertType)) {
+          alerts.add({
+            'type': AlertThresholdService.getAlertDisplayName(alertType),
+            'alertType': alertType,
+            'title': _getAlertTitle(alertType, worker),
+            'workerName': worker.name,
+            'vestId': worker.vestId,
+            'location': worker.location,
+            'time': _getTimeAgo(worker.lastUpdated),
+            'status': 'RESOLVED',
+            'severity': _getAlertSeverity(alertType),
+            'statusColor': AlertThresholdService.getAlertColor(alertType),
+            'cardColor': AlertThresholdService.getAlertColor(alertType),
+            'icon': AlertThresholdService.getAlertIcon(alertType),
+            'vitals': _getVitalsString(worker, alertType),
+            'worker': worker,
           });
-        },
-        child: Container(
-          padding: const EdgeInsets.symmetric(vertical: 10),
-          decoration: BoxDecoration(
-            color:
-                isSelected ? const Color(0xFF2A4A5F) : const Color(0xFF1A3344),
-            borderRadius: BorderRadius.circular(8),
+        }
+      }
+
+      // ✅ Add panic alert if panic button is pressed
+      if (worker.panic == 1) {
+        final hasPanicAlert = alerts.any((a) =>
+            a['vestId'] == worker.vestId && a['alertType'] == 'PANIC_BUTTON');
+
+        if (!hasPanicAlert) {
+          alerts.add({
+            'type': 'PANIC ALERT',
+            'alertType': 'PANIC_BUTTON',
+            'title': 'Emergency panic button activated',
+            'workerName': worker.name,
+            'vestId': worker.vestId,
+            'location': worker.location,
+            'time': _getTimeAgo(worker.lastUpdated),
+            'status': 'ACTIVE',
+            'severity': 'CRITICAL',
+            'statusColor': Colors.red,
+            'cardColor': Colors.red,
+            'icon': Icons.pan_tool,
+            'vitals': _getVitalsString(worker, 'PANIC_BUTTON'),
+            'worker': worker,
+          });
+        }
+      }
+    }
+
+    // Sort: Active alerts first (by severity), then resolved alerts
+    alerts.sort((a, b) {
+      // Active alerts always come first
+      if (a['status'] == 'ACTIVE' && b['status'] != 'ACTIVE') {
+        return -1;
+      }
+      if (b['status'] == 'ACTIVE' && a['status'] != 'ACTIVE') {
+        return 1;
+      }
+
+      // Within same status, critical first
+      if (a['severity'] == 'CRITICAL' && b['severity'] != 'CRITICAL') {
+        return -1;
+      }
+      if (b['severity'] == 'CRITICAL' && a['severity'] != 'CRITICAL') {
+        return 1;
+      }
+
+      // Then by time
+      final timeA = a['worker'].lastUpdated ?? DateTime.now();
+      final timeB = b['worker'].lastUpdated ?? DateTime.now();
+      return timeB.compareTo(timeA);
+    });
+
+    return alerts;
+  }
+
+  String _getAlertTitle(String alertType, worker) {
+    switch (alertType) {
+      case 'LOW_HEART_RATE':
+        return 'Low heart rate detected - ${worker.heartRate} BPM';
+      case 'HIGH_HEART_RATE':
+        return 'High heart rate detected - ${worker.heartRate} BPM';
+      case 'HIGH_TEMPERATURE':
+        return 'High body temperature - ${worker.temperature.toStringAsFixed(1)}°F';
+      case 'LOW_SPO2':
+        return 'Critical SpO₂ levels detected - ${worker.spo2}%';
+      case 'HIGH_GAS':
+        return 'Dangerous gas level detected - ${worker.gasRate} ppm';
+      case 'LOW_OXYGEN':
+        return 'Low oxygen level - ${worker.oxygenRate}%';
+      case 'FALL_DETECTED':
+        return 'Fall detection triggered - worker may need assistance';
+      case 'PANIC_BUTTON':
+        return 'Emergency panic button activated';
+      default:
+        return 'Safety alert triggered';
+    }
+  }
+
+  String _getVitalsString(worker, String alertType) {
+    switch (alertType) {
+      case 'LOW_HEART_RATE':
+      case 'HIGH_HEART_RATE':
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F  •  ${worker.spo2}% SpO₂';
+      case 'LOW_SPO2':
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F  •  ${worker.spo2}% SpO₂';
+      case 'HIGH_TEMPERATURE':
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F';
+      case 'HIGH_GAS':
+        return '${worker.gasRate} ppm Gas  •  ${worker.oxygenRate}% O₂';
+      case 'LOW_OXYGEN':
+        return '${worker.oxygenRate}% O₂  •  ${worker.gasRate} ppm Gas';
+      case 'FALL_DETECTED':
+        return 'X: ${worker.accelX.toStringAsFixed(2)}g  •  Y: ${worker.accelY.toStringAsFixed(2)}g  •  Z: ${worker.accelZ.toStringAsFixed(2)}g';
+      case 'PANIC_BUTTON':
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F  •  ${worker.spo2}% SpO₂';
+      default:
+        return '';
+    }
+  }
+
+  String _getAlertSeverity(String alertType) {
+    switch (alertType) {
+      case 'FALL_DETECTED':
+      case 'PANIC_BUTTON':
+      case 'LOW_SPO2':
+      case 'LOW_OXYGEN':
+        return 'CRITICAL';
+      default:
+        return 'WARNING';
+    }
+  }
+
+  String _getTimeAgo(DateTime? dateTime) {
+    if (dateTime == null) return 'Just now';
+
+    final difference = DateTime.now().difference(dateTime);
+
+    if (difference.inMinutes < 1) {
+      return 'Just now';
+    } else if (difference.inMinutes < 60) {
+      return '${difference.inMinutes} min ago';
+    } else if (difference.inHours < 24) {
+      return '${difference.inHours} hr ago';
+    } else {
+      return '${difference.inDays} days ago';
+    }
+  }
+
+  /// ✅ SIMPLIFIED FILTER - ONLY ACTIVE OR RESOLVED
+  List<Map<String, dynamic>> _filterAlerts(
+      List<Map<String, dynamic>> alerts, String filter) {
+    if (filter == 'Active') {
+      return alerts.where((a) => a['status'] == 'ACTIVE').toList();
+    } else if (filter == 'Resolved') {
+      return alerts.where((a) => a['status'] == 'RESOLVED').toList();
+    }
+    return alerts;
+  }
+
+  /// ✅ UPDATED TAB WITH COUNT BADGE
+  Widget _buildFilterTab({
+    required String label,
+    required int count,
+    required Color color,
+  }) {
+    bool isSelected = _selectedFilter == label;
+
+    return GestureDetector(
+      onTap: () {
+        setState(() {
+          _selectedFilter = label;
+        });
+      },
+      child: Container(
+        padding: const EdgeInsets.symmetric(vertical: 14, horizontal: 16),
+        decoration: BoxDecoration(
+          color: isSelected ? const Color(0xFF2A4A5F) : const Color(0xFF1A3344),
+          borderRadius: BorderRadius.circular(12),
+          border: Border.all(
+            color: isSelected ? color.withOpacity(0.5) : Colors.transparent,
+            width: 2,
           ),
-          child: Text(
-            label,
-            textAlign: TextAlign.center,
-            style: TextStyle(
-              fontSize: 14,
-              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-              color: isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+          boxShadow: isSelected
+              ? [
+                  BoxShadow(
+                    color: color.withOpacity(0.3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
+                  )
+                ]
+              : null,
+        ),
+        child: Row(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Text(
+              label,
+              style: TextStyle(
+                fontSize: 15,
+                fontWeight: isSelected ? FontWeight.bold : FontWeight.w500,
+                color:
+                    isSelected ? Colors.white : Colors.white.withOpacity(0.6),
+              ),
             ),
-          ),
+            const SizedBox(width: 8),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 8, vertical: 2),
+              decoration: BoxDecoration(
+                color: isSelected ? color : Colors.white.withOpacity(0.1),
+                borderRadius: BorderRadius.circular(12),
+              ),
+              child: Text(
+                count.toString(),
+                style: TextStyle(
+                  fontSize: 13,
+                  fontWeight: FontWeight.bold,
+                  color: isSelected
+                      ? (label == 'Active' ? Colors.white : Colors.black)
+                      : Colors.white.withOpacity(0.6),
+                ),
+              ),
+            ),
+          ],
         ),
       ),
     );
   }
 
   Widget _buildAlertCard({
-    required String type,
-    required String title,
-    required String workerName,
-    required String vestId,
-    required String location,
-    required String time,
-    required String status,
-    required Color statusColor,
-    required Color cardColor,
-    required IconData icon,
-    String? vitals,
-    bool showAcknowledge = false,
-    bool showResolve = false,
+    required BuildContext context,
+    required Map<String, dynamic> alert,
+    required WorkerProvider workerProvider,
   }) {
+    final isActive = alert['status'] == 'ACTIVE';
+    final isResolved = alert['status'] == 'RESOLVED';
+    final isCritical = alert['severity'] == 'CRITICAL';
+
     return Container(
       padding: const EdgeInsets.all(20),
       decoration: BoxDecoration(
-        color: cardColor.withOpacity(0.9),
+        color: isResolved
+            ? Colors.grey.withOpacity(0.2)
+            : (alert['cardColor'] as Color).withOpacity(0.15),
         borderRadius: BorderRadius.circular(16),
+        border: Border.all(
+          color: isResolved
+              ? Colors.grey.withOpacity(0.5)
+              : (alert['cardColor'] as Color).withOpacity(0.6),
+          width: 2,
+        ),
       ),
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -1336,38 +1558,61 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
             children: [
               Row(
                 children: [
-                  Icon(icon, color: Colors.white, size: 20),
-                  const SizedBox(width: 8),
-                  Text(
-                    type,
-                    style: const TextStyle(
-                      fontSize: 13,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white,
-                      letterSpacing: 0.5,
-                    ),
+                  Icon(alert['icon'],
+                      color: isResolved ? Colors.grey : alert['statusColor'],
+                      size: 22),
+                  const SizedBox(width: 10),
+                  Column(
+                    crossAxisAlignment: CrossAxisAlignment.start,
+                    children: [
+                      Text(
+                        alert['type'].toString().toUpperCase(),
+                        style: TextStyle(
+                          fontSize: 13,
+                          fontWeight: FontWeight.bold,
+                          color: isResolved ? Colors.grey : Colors.white,
+                          letterSpacing: 0.5,
+                        ),
+                      ),
+                      if (isCritical && !isResolved)
+                        Container(
+                          margin: const EdgeInsets.only(top: 4),
+                          padding: const EdgeInsets.symmetric(
+                              horizontal: 6, vertical: 2),
+                          decoration: BoxDecoration(
+                            color: Colors.red.withOpacity(0.2),
+                            borderRadius: BorderRadius.circular(4),
+                            border: Border.all(color: Colors.red, width: 1),
+                          ),
+                          child: const Text(
+                            'CRITICAL',
+                            style: TextStyle(
+                              fontSize: 9,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.red,
+                              letterSpacing: 0.5,
+                            ),
+                          ),
+                        ),
+                    ],
                   ),
                 ],
               ),
               Container(
                 padding: const EdgeInsets.symmetric(
-                  horizontal: 10,
-                  vertical: 4,
+                  horizontal: 12,
+                  vertical: 6,
                 ),
                 decoration: BoxDecoration(
-                  color: status == 'ACTIVE'
-                      ? Colors.white
-                      : status == 'ACKNOWLEDGED'
-                          ? Colors.orange[300]
-                          : const Color(0xFF00FF41),
-                  borderRadius: BorderRadius.circular(6),
+                  color: isActive ? Colors.red : const Color(0xFF00FF41),
+                  borderRadius: BorderRadius.circular(12),
                 ),
                 child: Text(
-                  status,
+                  alert['status'],
                   style: const TextStyle(
-                    fontSize: 10,
+                    fontSize: 11,
                     fontWeight: FontWeight.bold,
-                    color: Colors.black,
+                    color: Colors.white,
                   ),
                 ),
               ),
@@ -1375,108 +1620,203 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
           ),
           const SizedBox(height: 12),
           Text(
-            title,
-            style: const TextStyle(
+            alert['title'],
+            style: TextStyle(
               fontSize: 15,
               fontWeight: FontWeight.bold,
-              color: Colors.white,
+              color: isResolved ? Colors.grey : Colors.white,
               height: 1.3,
             ),
           ),
           const SizedBox(height: 12),
           Row(
             children: [
-              const Icon(Icons.person, color: Colors.white70, size: 16),
+              Icon(Icons.person,
+                  color: isResolved ? Colors.grey : Colors.white70, size: 16),
               const SizedBox(width: 6),
               Text(
-                '$workerName ($vestId)',
-                style: const TextStyle(fontSize: 13, color: Colors.white),
+                '${alert['workerName']} (${alert['vestId']})',
+                style: TextStyle(
+                    fontSize: 13,
+                    color: isResolved ? Colors.grey : Colors.white),
               ),
             ],
           ),
           const SizedBox(height: 6),
           Row(
             children: [
-              const Icon(Icons.location_on, color: Colors.white70, size: 16),
+              Icon(Icons.location_on,
+                  color: isResolved ? Colors.grey : Colors.white70, size: 16),
               const SizedBox(width: 6),
               Text(
-                location,
-                style: const TextStyle(fontSize: 13, color: Colors.white),
+                alert['location'],
+                style: TextStyle(
+                    fontSize: 13,
+                    color: isResolved ? Colors.grey : Colors.white),
               ),
             ],
           ),
-          if (vitals != null) ...[
-            const SizedBox(height: 8),
-            Text(
-              vitals,
-              style: const TextStyle(
-                fontSize: 13,
-                color: Colors.white,
-                fontWeight: FontWeight.w500,
+          if (alert['vitals'] != null &&
+              alert['vitals'].toString().isNotEmpty) ...[
+            const SizedBox(height: 10),
+            Container(
+              padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+              decoration: BoxDecoration(
+                color: Colors.black.withOpacity(0.3),
+                borderRadius: BorderRadius.circular(8),
+              ),
+              child: Row(
+                children: [
+                  Icon(
+                    Icons.monitor_heart,
+                    size: 14,
+                    color: isResolved ? Colors.grey : Colors.white70,
+                  ),
+                  const SizedBox(width: 8),
+                  Expanded(
+                    child: Text(
+                      alert['vitals'],
+                      style: TextStyle(
+                        fontSize: 12,
+                        color: isResolved ? Colors.grey : Colors.white,
+                        fontWeight: FontWeight.w500,
+                        fontFamily: 'monospace',
+                      ),
+                    ),
+                  ),
+                ],
               ),
             ),
           ],
-          const SizedBox(height: 16),
-          Row(
-            children: [
-              const Icon(Icons.access_time, color: Colors.white70, size: 14),
-              const SizedBox(width: 4),
-              Text(
-                time,
-                style: const TextStyle(fontSize: 12, color: Colors.white70),
-              ),
-            ],
-          ),
           const SizedBox(height: 12),
           Row(
             children: [
-              if (showAcknowledge)
-                Expanded(
-                  child: ElevatedButton(
-                    onPressed: () {},
-                    style: ElevatedButton.styleFrom(
-                      backgroundColor: Colors.white.withOpacity(0.2),
-                      foregroundColor: Colors.white,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
-                    ),
-                    child: const Text('Acknowledge'),
-                  ),
-                ),
-              if (showAcknowledge && showResolve) const SizedBox(width: 8),
-              if (showResolve)
+              Icon(Icons.access_time,
+                  color: isResolved ? Colors.grey : Colors.white70, size: 14),
+              const SizedBox(width: 4),
+              Text(
+                alert['time'],
+                style: TextStyle(
+                    fontSize: 12,
+                    color: isResolved ? Colors.grey : Colors.white70),
+              ),
+            ],
+          ),
+
+          // ✅ SHOW BUTTONS ONLY FOR ACTIVE ALERTS
+          if (isActive) ...[
+            const SizedBox(height: 16),
+            Row(
+              children: [
                 Expanded(
                   child: ElevatedButton.icon(
-                    onPressed: () {},
+                    onPressed: () async {
+                      await workerProvider.sendManualAlertCommand(
+                        alert['vestId'],
+                        alert['alertType'],
+                      );
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          const SnackBar(
+                            content: Text('🔊 Voice alert sent to leader'),
+                            backgroundColor: Colors.purple,
+                            duration: Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
+                    icon: const Icon(Icons.volume_up, size: 18),
+                    label: const Text('Send Alert'),
+                    style: ElevatedButton.styleFrom(
+                      backgroundColor: Colors.purple,
+                      foregroundColor: Colors.white,
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
+                    ),
+                  ),
+                ),
+                const SizedBox(width: 8),
+                Expanded(
+                  child: ElevatedButton.icon(
+                    onPressed: () async {
+                      // ✅ CRITICAL FIX: Resolve ONLY this specific alert
+                      await workerProvider.resolveSpecificAlert(
+                        alert['vestId'],
+                        alert['alertType'],
+                      );
+
+                      if (context.mounted) {
+                        ScaffoldMessenger.of(context).showSnackBar(
+                          SnackBar(
+                            content: Text(
+                              '✅ ${alert['type']} resolved for ${alert['workerName']}',
+                            ),
+                            backgroundColor: const Color(0xFF00FF41),
+                            duration: const Duration(seconds: 2),
+                          ),
+                        );
+                      }
+                    },
                     icon: const Icon(Icons.check_circle, size: 18),
                     label: const Text('Resolve'),
                     style: ElevatedButton.styleFrom(
                       backgroundColor: const Color(0xFF00FF41),
                       foregroundColor: Colors.black,
-                      padding: const EdgeInsets.symmetric(vertical: 10),
+                      padding: const EdgeInsets.symmetric(vertical: 12),
+                      shape: RoundedRectangleBorder(
+                        borderRadius: BorderRadius.circular(8),
+                      ),
                     ),
                   ),
                 ),
-              const SizedBox(width: 8),
-              Container(
-                decoration: BoxDecoration(
-                  color: Colors.blue,
-                  borderRadius: BorderRadius.circular(8),
-                ),
-                child: IconButton(
-                  onPressed: () {},
-                  icon: const Icon(Icons.phone, color: Colors.white, size: 20),
-                  padding: const EdgeInsets.all(10),
+              ],
+            ),
+          ],
+
+          // ✅ SHOW RESOLVED BADGE FOR RESOLVED ALERTS
+          if (isResolved) ...[
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.symmetric(vertical: 10, horizontal: 16),
+              decoration: BoxDecoration(
+                color: const Color(0xFF00FF41).withOpacity(0.2),
+                borderRadius: BorderRadius.circular(8),
+                border: Border.all(
+                  color: const Color(0xFF00FF41).withOpacity(0.5),
+                  width: 1,
                 ),
               ),
-            ],
-          ),
+              child: const Row(
+                mainAxisAlignment: MainAxisAlignment.center,
+                children: [
+                  Icon(
+                    Icons.check_circle,
+                    color: Color(0xFF00FF41),
+                    size: 18,
+                  ),
+                  SizedBox(width: 8),
+                  Text(
+                    'Alert Resolved - Condition Normal',
+                    style: TextStyle(
+                      fontSize: 13,
+                      fontWeight: FontWeight.bold,
+                      color: Color(0xFF00FF41),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ],
         ],
       ),
     );
   }
 }
-
 // ==================== COMMUNICATION HUB CONTENT ====================
+
 class CommunicationHubContent extends StatefulWidget {
   const CommunicationHubContent({Key? key}) : super(key: key);
 
