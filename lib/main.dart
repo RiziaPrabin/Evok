@@ -518,7 +518,7 @@ class HomeContent extends StatelessWidget {
                               _getDisplayName(worker),
                               worker.vestId,
                               '${worker.heartRate} BPM',
-                              '${worker.temperature.toStringAsFixed(1)}°F',
+                              '${worker.temperature.toStringAsFixed(1)}°C',
                               '${worker.spo2}% SpO₂',
                               worker.status,
                               worker.statusColor,
@@ -1381,7 +1381,7 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
       case 'HIGH_HEART_RATE':
         return 'High heart rate detected - ${worker.heartRate} BPM';
       case 'HIGH_TEMPERATURE':
-        return 'High body temperature - ${worker.temperature.toStringAsFixed(1)}°F';
+        return 'High body temperature - ${worker.temperature.toStringAsFixed(1)}°C';
       case 'LOW_SPO2':
         return 'Critical SpO₂ levels detected - ${worker.spo2}%';
       case 'HIGH_GAS':
@@ -1401,11 +1401,11 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
     switch (alertType) {
       case 'LOW_HEART_RATE':
       case 'HIGH_HEART_RATE':
-        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F  •  ${worker.spo2}% SpO₂';
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°C  •  ${worker.spo2}% SpO₂';
       case 'LOW_SPO2':
-        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F  •  ${worker.spo2}% SpO₂';
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°C  •  ${worker.spo2}% SpO₂';
       case 'HIGH_TEMPERATURE':
-        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F';
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°C';
       case 'HIGH_GAS':
         return '${worker.gasRate} ppm Gas  •  ${worker.oxygenRate}% O₂';
       case 'LOW_OXYGEN':
@@ -1413,7 +1413,7 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
       case 'FALL_DETECTED':
         return 'X: ${worker.accelX.toStringAsFixed(2)}g  •  Y: ${worker.accelY.toStringAsFixed(2)}g  •  Z: ${worker.accelZ.toStringAsFixed(2)}g';
       case 'PANIC_BUTTON':
-        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°F  •  ${worker.spo2}% SpO₂';
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°C  •  ${worker.spo2}% SpO₂';
       default:
         return '';
     }
@@ -3695,7 +3695,7 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
                         Colors.red),
                     _animatedVitalCard(
                         Icons.thermostat,
-                        "${selectedWorker.temperature.toStringAsFixed(1)} °F",
+                        "${selectedWorker.temperature.toStringAsFixed(1)} °C",
                         "Temperature",
                         Colors.orange),
                     _animatedVitalCard(Icons.air, "${selectedWorker.spo2} %",

@@ -16,6 +16,11 @@ class WorkerProvider extends ChangeNotifier {
   // ✅ Store leader's oxygen value to share with worker
   int _leaderOxygenRate = 0;
 
+  // ✅ Convert Fahrenheit to Celsius
+  double _fahrenheitToCelsius(double fahrenheit) {
+    return (fahrenheit - 32) * 5 / 9;
+  }
+
   List<Worker> _workers = [
     Worker(
       name: 'Marcus Johnson',
@@ -88,8 +93,9 @@ class WorkerProvider extends ChangeNotifier {
       _updateWorker(
         vestId: "VEST-001",
         bpm: int.tryParse(event.snapshot.child('BPM').value.toString()) ?? 0,
-        temp: double.tryParse(event.snapshot.child('Temp').value.toString()) ??
-            0.0,
+        temp: _fahrenheitToCelsius(
+            double.tryParse(event.snapshot.child('Temp').value.toString()) ??
+                0.0),
         spo2: int.tryParse(event.snapshot.child('SpO2').value.toString()) ?? 0,
         panic: panic,
         lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
@@ -136,8 +142,9 @@ class WorkerProvider extends ChangeNotifier {
       _updateWorker(
         vestId: "VEST-002",
         bpm: int.tryParse(event.snapshot.child('BPM').value.toString()) ?? 0,
-        temp: double.tryParse(event.snapshot.child('Temp').value.toString()) ??
-            0.0,
+        temp: _fahrenheitToCelsius(
+            double.tryParse(event.snapshot.child('Temp').value.toString()) ??
+                0.0),
         spo2: int.tryParse(event.snapshot.child('SpO2').value.toString()) ?? 0,
         panic: panic,
         lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
