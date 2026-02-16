@@ -527,6 +527,9 @@ class HomeContent extends StatelessWidget {
                           );
                         }).toList(),
                       const SizedBox(height: 24),
+
+                      // Quick Actions section
+                      const SizedBox(height: 24),
                       const Text(
                         'Quick Actions',
                         style: TextStyle(
@@ -537,27 +540,102 @@ class HomeContent extends StatelessWidget {
                       ),
                       const SizedBox(height: 12),
 
-                      Row(
-                        children: [
-                          Expanded(
+// Emergency Broadcast Toggle Button - FULL WIDTH
+                      Consumer<WorkerProvider>(
+                        builder: (context, provider, child) {
+                          final isActive = provider.isEmergencyBroadcastActive;
+
+                          return SizedBox(
+                            width: double.infinity, // ✅ Full width
                             child: ElevatedButton.icon(
-                              onPressed: () {},
-                              icon: const Icon(Icons.campaign),
-                              label: const Text('Emergency Broadcast'),
+                              onPressed: () async {
+                                // Show confirmation dialog
+                                final confirm = await showDialog<bool>(
+                                  context: context,
+                                  builder: (context) => AlertDialog(
+                                    backgroundColor: const Color(0xFF0F2230),
+                                    title: Text(
+                                      isActive
+                                          ? '🛑 Stop Emergency Broadcast'
+                                          : '⚠️ Start Emergency Broadcast',
+                                      style:
+                                          const TextStyle(color: Colors.white),
+                                    ),
+                                    content: Text(
+                                      isActive
+                                          ? 'This will clear all panic alerts and stop the emergency broadcast.'
+                                          : 'This will trigger a panic alert for ALL workers.',
+                                      style: const TextStyle(
+                                          color: Colors.white70),
+                                    ),
+                                    actions: [
+                                      TextButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, false),
+                                        child: const Text('Cancel'),
+                                      ),
+                                      ElevatedButton(
+                                        onPressed: () =>
+                                            Navigator.pop(context, true),
+                                        style: ElevatedButton.styleFrom(
+                                          backgroundColor: isActive
+                                              ? Colors.orange
+                                              : Colors.red,
+                                        ),
+                                        child:
+                                            Text(isActive ? 'STOP' : 'CONFIRM'),
+                                      ),
+                                    ],
+                                  ),
+                                );
+
+                                if (confirm == true) {
+                                  // Toggle emergency broadcast
+                                  await provider.toggleEmergencyBroadcast();
+
+                                  // Show success message
+                                  if (context.mounted) {
+                                    ScaffoldMessenger.of(context).showSnackBar(
+                                      SnackBar(
+                                        content: Text(
+                                          isActive
+                                              ? '✅ Emergency broadcast stopped'
+                                              : '🚨 Emergency broadcast activated',
+                                        ),
+                                        backgroundColor: isActive
+                                            ? Colors.orange
+                                            : Colors.red,
+                                        duration: const Duration(seconds: 3),
+                                      ),
+                                    );
+                                  }
+                                }
+                              },
+                              icon: Icon(
+                                  isActive ? Icons.stop_circle : Icons.campaign,
+                                  size: 24),
+                              label: Text(
+                                isActive
+                                    ? 'Stop Emergency Broadcast'
+                                    : 'Emergency Broadcast',
+                                style: const TextStyle(
+                                  fontSize: 16,
+                                  fontWeight: FontWeight.bold,
+                                ),
+                              ),
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: Colors.red,
+                                backgroundColor:
+                                    isActive ? Colors.orange : Colors.red,
                                 foregroundColor: Colors.white,
                                 padding: const EdgeInsets.symmetric(
-                                  vertical: 16,
-                                ),
+                                    vertical: 18), // ✅ More vertical padding
                                 shape: RoundedRectangleBorder(
                                   borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                             ),
-                          ),
-                          const SizedBox(width: 12),
-                        ],
+                          );
+                        },
                       ),
                       const SizedBox(height: 20),
                     ],
@@ -3269,25 +3347,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
           ),
 
           const SizedBox(height: 24),
-          const Align(
-            alignment: Alignment.centerLeft,
-            child: Text(
-              'Emergency Protocols',
-              style: TextStyle(
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                  color: Colors.white),
-            ),
-          ),
-          const SizedBox(height: 12),
-          _buildProtocolCard(
-            icon: Icons.campaign,
-            iconColor: Colors.red,
-            title: 'Site-Wide Evacuation',
-            subtitle: 'Activate immediate evacuation alert',
-            onTap: () => _activateProtocol('Site-Wide Evacuation'),
-          ),
-          const SizedBox(height: 20),
         ],
       ),
     );

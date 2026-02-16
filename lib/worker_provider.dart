@@ -12,7 +12,8 @@ class WorkerProvider extends ChangeNotifier {
   final AlertSoundService _alertSound = AlertSoundService();
   final AlertThresholdService _thresholdService = AlertThresholdService();
   final Map<String, int> _previousPanicStates = {};
-
+  // ✅ NEW: Track if supervisor initiated the emergency broadcast
+  bool _supervisorInitiatedBroadcast = false;
   // ✅ Store leader's oxygen value to share with worker
   int _leaderOxygenRate = 0;
 
@@ -225,12 +226,21 @@ class WorkerProvider extends ChangeNotifier {
     // This ensures the UI updates immediately when Firebase sends new data
     notifyListeners();
 
-    // ✅ PLAY/STOP ALERT SOUND BASED ON PANIC STATE
-    if (isNewAlert) {
-      debugPrint("🚨 NEW PANIC ALERT for $vestId - STARTING SOUND");
+    // ✅ PLAY/STOP ALERT SOUND - BUT ONLY IF NOT SUPERVISOR-INITIATED
+    if (isNewAlert && !_supervisorInitiatedBroadcast) {
+      // Worker pressed panic button → Play sound
+      debugPrint("🚨 WORKER PANIC ALERT for $vestId - STARTING SOUND");
       _alertSound.playPanicAlert();
+    } else if (isNewAlert && _supervisorInitiatedBroadcast) {
+      // Supervisor triggered broadcast → Don't play sound
+      debugPrint("🔇 SUPERVISOR BROADCAST for $vestId - NO SOUND");
     } else if (isAlertResolved) {
       debugPrint("✅ Panic resolved for $vestId - STOPPING SOUND");
+      // ✅ Only reset supervisor flag if ALL workers are no longer in panic
+      if (!_workers.any((w) => w.panic == 1)) {
+        _supervisorInitiatedBroadcast = false;
+        debugPrint("🔄 Reset supervisor broadcast flag");
+      }
       // Only stop if no other workers are in alert
       if (!hasActiveAlert) {
         _alertSound.stopAlert();
@@ -343,6 +353,70 @@ class WorkerProvider extends ChangeNotifier {
       }
 
       notifyListeners();
+    }
+  }
+
+// ✅ Emergency Broadcast - Set panic to 1 for ALL workers
+// ✅ Check if emergency broadcast is currently active
+  bool get isEmergencyBroadcastActive {
+    // Only return true if supervisor initiated it, not if workers pressed panic
+    return _supervisorInitiatedBroadcast;
+  }
+
+  Future<void> toggleEmergencyBroadcast() async {
+    if (_supervisorInitiatedBroadcast) {
+      // STOP emergency broadcast
+      debugPrint("🛑 STOPPING EMERGENCY BROADCAST");
+
+      try {
+        // Reset the flag FIRST
+        _supervisorInitiatedBroadcast = false;
+
+        // Notify listeners immediately so button updates
+        notifyListeners();
+
+        // Set panic = 0 for Worker (Marcus)
+        await _rootRef.child("Worker").update({'Panic': 0});
+
+        // Set panic = 0 for Leader (Sarah)
+        await _rootRef.child("Leader").update({'Panic': 0});
+
+        // Clear all alerts for both workers
+        _thresholdService.clearAllAlerts('VEST-001');
+        _thresholdService.clearAllAlerts('VEST-002');
+
+        // Stop alert sound
+        _alertSound.stopAlert();
+
+        debugPrint("✅ Emergency broadcast stopped");
+      } catch (e) {
+        debugPrint("❌ Error stopping emergency broadcast: $e");
+        _supervisorInitiatedBroadcast = true; // Revert on error
+        notifyListeners();
+      }
+    } else {
+      // START emergency broadcast
+      debugPrint("🚨 STARTING EMERGENCY BROADCAST");
+
+      try {
+        // ✅ SET FLAG: This is supervisor-initiated
+        _supervisorInitiatedBroadcast = true;
+
+        // Notify listeners immediately so button updates
+        notifyListeners();
+
+        // Set panic = 1 for Worker (Marcus)
+        await _rootRef.child("Worker").update({'Panic': 1});
+
+        // Set panic = 1 for Leader (Sarah)
+        await _rootRef.child("Leader").update({'Panic': 1});
+
+        debugPrint("✅ Emergency broadcast activated (silent mode)");
+      } catch (e) {
+        debugPrint("❌ Error activating emergency broadcast: $e");
+        _supervisorInitiatedBroadcast = false; // Reset on error
+        notifyListeners();
+      }
     }
   }
 
