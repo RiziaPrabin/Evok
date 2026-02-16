@@ -371,32 +371,55 @@ class HomeContent extends StatelessWidget {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        const Text(
-                          'EVOK Supervisor',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF00FF41).withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.shield_outlined,
+                              size: 28,
+                              color: Color(0xFF00FF41),
+                            ),
                           ),
                         ),
-                        const Text(
-                          'Dashboard',
-                          style: TextStyle(
-                            fontSize: 20,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
-                          ),
-                        ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Real-time Worker Monitoring',
-                          style: TextStyle(
-                            fontSize: 13,
-                            color: Colors.white.withOpacity(0.6),
-                          ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'EVOK SUPERVISOR',
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const Text(
+                              'DASHBOARD',
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Real-time Worker Monitoring',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
@@ -902,31 +925,54 @@ class _WorkerManagementContentState extends State<WorkerManagementContent> {
                 child: Row(
                   mainAxisAlignment: MainAxisAlignment.spaceBetween,
                   children: [
-                    Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
+                    Row(
                       children: [
-                        const Text(
-                          'Worker Management',
-                          style: TextStyle(
-                            fontSize: 24,
-                            fontWeight: FontWeight.bold,
-                            color: Colors.white,
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF00FF41).withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.shield_outlined,
+                              size: 28,
+                              color: Color(0xFF00FF41),
+                            ),
                           ),
                         ),
-                        const SizedBox(height: 4),
-                        Text(
-                          'Smart Vest Allocation & Tracking',
-                          style: TextStyle(
-                            color: Colors.white.withOpacity(0.6),
-                            fontSize: 13,
-                          ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'WORKER MANAGEMENT',
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Smart Vest Allocation & Tracking',
+                              style: TextStyle(
+                                color: Colors.white.withOpacity(0.6),
+                                fontSize: 13,
+                              ),
+                            ),
+                          ],
                         ),
                       ],
                     ),
                     Container(
                       decoration: BoxDecoration(
                         color: const Color(0xFF00FF41),
-                        borderRadius: BorderRadius.circular(12),
+                        borderRadius: BorderRadius.circular(25),
                       ),
                       child: IconButton(
                         icon: const Icon(Icons.add, color: Colors.black),
@@ -1234,21 +1280,49 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
                 child: Column(
                   crossAxisAlignment: CrossAxisAlignment.start,
                   children: [
-                    const Text(
-                      'Safety Alerts',
-                      style: TextStyle(
-                        fontSize: 24,
-                        fontWeight: FontWeight.bold,
-                        color: Colors.white,
-                      ),
-                    ),
-                    const SizedBox(height: 4),
-                    Text(
-                      'Real-time Worker Safety Monitoring',
-                      style: TextStyle(
-                        fontSize: 13,
-                        color: Colors.white.withOpacity(0.6),
-                      ),
+                    Row(
+                      children: [
+                        Container(
+                          width: 50,
+                          height: 50,
+                          decoration: BoxDecoration(
+                            shape: BoxShape.circle,
+                            border: Border.all(
+                              color: const Color(0xFF00FF41).withOpacity(0.3),
+                              width: 2,
+                            ),
+                          ),
+                          child: const Center(
+                            child: Icon(
+                              Icons.shield_outlined,
+                              size: 28,
+                              color: Color(0xFF00FF41),
+                            ),
+                          ),
+                        ),
+                        const SizedBox(width: 12),
+                        Column(
+                          crossAxisAlignment: CrossAxisAlignment.start,
+                          children: [
+                            const Text(
+                              'SAFETY ALERTS',
+                              style: TextStyle(
+                                fontSize: 19,
+                                fontWeight: FontWeight.bold,
+                                color: Colors.white,
+                              ),
+                            ),
+                            const SizedBox(height: 4),
+                            Text(
+                              'Real-time Worker Safety Monitoring',
+                              style: TextStyle(
+                                fontSize: 13,
+                                color: Colors.white.withOpacity(0.6),
+                              ),
+                            ),
+                          ],
+                        ),
+                      ],
                     ),
                   ],
                 ),
@@ -1914,19 +1988,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
   Position? _currentPosition;
   String _currentAddress = "";
 
-  // Language selection
-  /*String selectedLangName = "Hindi";
-  String selectedLangCode = "hi";
-
-  // Available languages
-  final Map<String, String> languages = {
-    "English": "en",
-    "Hindi": "hi",
-    "Tamil": "ta",
-    "Malayalam": "ml",
-    "Telugu": "te",
-  };*/
-
   // Predefined commands with emojis
   final List<Map<String, dynamic>> commands = [
     {
@@ -2032,11 +2093,8 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
     try {
       await _audioCommandRef.set({
         'command': command,
-        // 'language': selectedLangCode,
         'timestamp': DateTime.now().toIso8601String(),
       });
-
-      // _showSnackBar('Command "$displayText" sent in $selectedLangName');
 
       // Show confirmation dialog
       _showCommandConfirmation(displayText, command);
@@ -2096,11 +2154,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
                       ),
                     ),
                     SizedBox(height: 4),
-                    /*Text(
-                      'Language: $selectedLangName',
-                      style: TextStyle(color: Colors.white70, fontSize: 12),
-                    ),
-                    SizedBox(height: 4),*/
                     Text(
                       'Command: $command',
                       style: TextStyle(color: Colors.white54, fontSize: 11),
@@ -2131,66 +2184,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       }
     });
   }
-/*
-  void _showLanguageSelector() {
-    showModalBottomSheet(
-      context: context,
-      backgroundColor: const Color(0xFF1A2F3F),
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(20)),
-      ),
-      builder: (_) {
-        return Column(
-          mainAxisSize: MainAxisSize.min,
-          children: [
-            Padding(
-              padding: const EdgeInsets.all(16.0),
-              child: Text(
-                'Select Language',
-                style: TextStyle(
-                  color: Colors.white,
-                  fontSize: 18,
-                  fontWeight: FontWeight.bold,
-                ),
-              ),
-            ),
-            ...languages.entries.map((entry) {
-              return ListTile(
-                leading: Icon(
-                  selectedLangName == entry.key
-                      ? Icons.radio_button_checked
-                      : Icons.radio_button_unchecked,
-                  color: selectedLangName == entry.key
-                      ? Color(0xFF00FF41)
-                      : Colors.white54,
-                ),
-                title: Text(
-                  entry.key,
-                  style: TextStyle(
-                    color: selectedLangName == entry.key
-                        ? Color(0xFF00FF41)
-                        : Colors.white,
-                    fontWeight: selectedLangName == entry.key
-                        ? FontWeight.bold
-                        : FontWeight.normal,
-                  ),
-                ),
-                onTap: () {
-                  setState(() {
-                    selectedLangName = entry.key;
-                    selectedLangCode = entry.value;
-                  });
-                  Navigator.pop(context);
-                  _showSnackBar('Language changed to ${entry.key}');
-                },
-              );
-            }).toList(),
-            SizedBox(height: 16),
-          ],
-        );
-      },
-    );
-  }*/
 
   void _showSnackBar(String message) {
     ScaffoldMessenger.of(context).showSnackBar(
@@ -2944,21 +2937,49 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Communication Hub',
-                  style: TextStyle(
-                    fontSize: 24,
-                    fontWeight: FontWeight.bold,
-                    color: Colors.white,
-                  ),
-                ),
-                const SizedBox(height: 4),
-                Text(
-                  'AI-Powered Multilingual Safety Communications',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF00FF41).withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.shield_outlined,
+                          size: 28,
+                          color: Color(0xFF00FF41),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'COMMUNICATION HUB',
+                          style: TextStyle(
+                            fontSize: 19,
+                            fontWeight: FontWeight.bold,
+                            color: Colors.white,
+                          ),
+                        ),
+                        const SizedBox(height: 4),
+                        Text(
+                          'Multilingual Safety Communications',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
               ],
             ),
@@ -3042,61 +3063,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       child: Column(
         crossAxisAlignment: CrossAxisAlignment.start,
         children: [
-          // Language Selector
-          /* const Text(
-            'Audio Command Language',
-            style: TextStyle(
-              fontSize: 18,
-              fontWeight: FontWeight.bold,
-              color: Colors.white,
-            ),
-          ),
-          const SizedBox(height: 12),
-          GestureDetector(
-            onTap: _showLanguageSelector,
-            child: Container(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
-              decoration: BoxDecoration(
-                color: const Color(0xFF1A3344),
-                borderRadius: BorderRadius.circular(10),
-                border: Border.all(
-                  color: Color(0xFF00FF41).withOpacity(0.3),
-                  width: 1,
-                ),
-              ),
-              child: Row(
-                children: [
-                  Icon(Icons.language, color: Color(0xFF00FF41), size: 24),
-                  SizedBox(width: 12),
-                  Expanded(
-                    child: Column(
-                      crossAxisAlignment: CrossAxisAlignment.start,
-                      children: [
-                        Text(
-                          selectedLangName,
-                          style: TextStyle(
-                            fontSize: 16,
-                            color: Colors.white,
-                            fontWeight: FontWeight.bold,
-                          ),
-                        ),
-                        Text(
-                          'Tap to change language',
-                          style: TextStyle(
-                            fontSize: 11,
-                            color: Colors.white54,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                  Icon(Icons.arrow_drop_down, color: Colors.white54),
-                ],
-              ),
-            ),
-          ),
-          const SizedBox(height: 24),*/
-
           // Predefined Commands
           const Text(
             'Audio Commands',
@@ -3428,7 +3394,6 @@ class _CommunicationHubContentState extends State<CommunicationHubContent> {
       ),
     );
   }
-// ... [Keep _buildEmergencyCard and all other helper methods exactly as they were] ...
 
   Widget _buildProtocolCard({
     required IconData icon,
@@ -3665,20 +3630,48 @@ class _AnalyticsDashboardContentState extends State<AnalyticsDashboardContent>
             child: Column(
               crossAxisAlignment: CrossAxisAlignment.start,
               children: [
-                const Text(
-                  'Worker Detailed View',
-                  style: TextStyle(
-                      fontSize: 24,
-                      fontWeight: FontWeight.bold,
-                      color: Colors.white),
-                ),
-                const SizedBox(height: 6),
-                Text(
-                  'Real-time Vitals Display',
-                  style: TextStyle(
-                    fontSize: 13,
-                    color: Colors.white.withOpacity(0.6),
-                  ),
+                Row(
+                  children: [
+                    Container(
+                      width: 50,
+                      height: 50,
+                      decoration: BoxDecoration(
+                        shape: BoxShape.circle,
+                        border: Border.all(
+                          color: const Color(0xFF00FF41).withOpacity(0.3),
+                          width: 2,
+                        ),
+                      ),
+                      child: const Center(
+                        child: Icon(
+                          Icons.shield_outlined,
+                          size: 28,
+                          color: Color(0xFF00FF41),
+                        ),
+                      ),
+                    ),
+                    const SizedBox(width: 12),
+                    Column(
+                      crossAxisAlignment: CrossAxisAlignment.start,
+                      children: [
+                        const Text(
+                          'WORKER DETAILED VIEW',
+                          style: TextStyle(
+                              fontSize: 19,
+                              fontWeight: FontWeight.bold,
+                              color: Colors.white),
+                        ),
+                        const SizedBox(height: 6),
+                        Text(
+                          'Real-time Vitals Display',
+                          style: TextStyle(
+                            fontSize: 13,
+                            color: Colors.white.withOpacity(0.6),
+                          ),
+                        ),
+                      ],
+                    ),
+                  ],
                 ),
                 const SizedBox(height: 12),
 
