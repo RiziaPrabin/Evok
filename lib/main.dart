@@ -1534,6 +1534,8 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
         return 'High heart rate detected - ${worker.heartRate} BPM';
       case 'HIGH_TEMPERATURE':
         return 'High body temperature - ${worker.temperature.toStringAsFixed(1)}°C';
+      case 'LOW_TEMPERATURE':
+        return 'Low body temperature - ${worker.temperature.toStringAsFixed(1)}°C';
       case 'LOW_SPO2':
         return 'Critical SpO₂ levels detected - ${worker.spo2}%';
       case 'HIGH_GAS':
@@ -1558,6 +1560,8 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
         return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°C  •  ${worker.spo2}% SpO₂';
       case 'HIGH_TEMPERATURE':
         return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°C';
+      case 'LOW_TEMPERATURE':
+        return '${worker.heartRate} BPM  •  ${worker.temperature.toStringAsFixed(1)}°C';
       case 'HIGH_GAS':
         return '${worker.gasRate} ppm Gas  •  ${worker.oxygenRate}% O₂';
       case 'LOW_OXYGEN':
@@ -1578,6 +1582,8 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
       case 'LOW_SPO2':
       case 'LOW_OXYGEN':
         return 'CRITICAL';
+      case 'LOW_TEMPERATURE':
+        return 'WARNING';
       default:
         return 'WARNING';
     }

@@ -17,7 +17,8 @@ class AlertThresholdService {
   // ✅ Thresholds
   static const int LOW_HEART_RATE = 50;
   static const int HIGH_HEART_RATE = 120;
-  static const double HIGH_TEMPERATURE = 100.0;
+  static const double LOW_TEMPERATURE = 25.0; // below 25°C = too cold
+  static const double HIGH_TEMPERATURE = 42.0; // above 42°C = too hot
   static const int LOW_SPO2 = 90;
   static const int HIGH_GAS = 50;
   static const int LOW_OXYGEN = 19;
@@ -69,9 +70,13 @@ class AlertThresholdService {
       }
     }
 
-    // ✅ Check temperature
-    if (worker.temperature > 0 && worker.temperature > HIGH_TEMPERATURE) {
-      currentAlerts.add('HIGH_TEMPERATURE');
+    // ✅ Check temperature (both LOW and HIGH)
+    if (worker.temperature > 0) {
+      if (worker.temperature < LOW_TEMPERATURE) {
+        currentAlerts.add('LOW_TEMPERATURE');
+      } else if (worker.temperature > HIGH_TEMPERATURE) {
+        currentAlerts.add('HIGH_TEMPERATURE');
+      }
     }
 
     // ✅ Check SpO2
@@ -144,13 +149,14 @@ class AlertThresholdService {
     }
   }
 
-  // ✅ CORRECTED: Return command codes in the format you specified
   String _getCommandCode(String alertType) {
     switch (alertType) {
       case 'LOW_HEART_RATE':
         return "LOW_HEART_RATE_DETECTED";
       case 'HIGH_HEART_RATE':
         return "HIGH_HEART_RATE_DETECTED";
+      case 'LOW_TEMPERATURE': // ✅ NEW
+        return "LOW_TEMPERATURE_DETECTED";
       case 'HIGH_TEMPERATURE':
         return "HIGH_TEMPERATURE_DETECTED";
       case 'LOW_SPO2':
@@ -168,13 +174,14 @@ class AlertThresholdService {
     }
   }
 
-  // ✅ Static helper methods
   static String getAlertDisplayName(String alertType) {
     switch (alertType) {
       case 'LOW_HEART_RATE':
         return 'Low Heart Rate';
       case 'HIGH_HEART_RATE':
         return 'High Heart Rate';
+      case 'LOW_TEMPERATURE': // ✅ NEW
+        return 'Low Temperature';
       case 'HIGH_TEMPERATURE':
         return 'High Temperature';
       case 'LOW_SPO2':
@@ -205,6 +212,8 @@ class AlertThresholdService {
         return Colors.orange;
       case 'LOW_HEART_RATE':
         return Colors.yellow;
+      case 'LOW_TEMPERATURE': // ✅ NEW
+        return Colors.blue;
       default:
         return Colors.grey;
     }
@@ -215,6 +224,8 @@ class AlertThresholdService {
       case 'LOW_HEART_RATE':
       case 'HIGH_HEART_RATE':
         return Icons.favorite;
+      case 'LOW_TEMPERATURE': // ✅ NEW
+        return Icons.ac_unit;
       case 'HIGH_TEMPERATURE':
         return Icons.thermostat;
       case 'LOW_SPO2':
