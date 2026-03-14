@@ -32,8 +32,8 @@ class _LiveMineMapState extends State<LiveMineMap> {
 
       setState(() {
         leaderLocation = LatLng(
-          (data['Lat'] as num).toDouble(),
-          (data['Lng'] as num).toDouble(),
+          (data['lat'] as num).toDouble(),
+          (data['lng'] as num).toDouble(),
         );
       });
 
@@ -46,8 +46,8 @@ class _LiveMineMapState extends State<LiveMineMap> {
 
       setState(() {
         workerLocation = LatLng(
-          (data['Lat'] as num).toDouble(),
-          (data['Lng'] as num).toDouble(),
+          (data['lat'] as num).toDouble(),
+          (data['lng'] as num).toDouble(),
         );
       });
 

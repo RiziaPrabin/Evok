@@ -76,34 +76,31 @@ class WorkerProvider extends ChangeNotifier {
       if (!event.snapshot.exists || event.snapshot.value == null) return;
 
       final accel =
-          double.tryParse(event.snapshot.child('AccelX').value.toString()) ??
-              0.0;
+          double.tryParse(event.snapshot.child('ax').value.toString()) ?? 0.0;
       final accelY =
-          double.tryParse(event.snapshot.child('AccelY').value.toString()) ??
-              0.0;
+          double.tryParse(event.snapshot.child('ay').value.toString()) ?? 0.0;
       final accelZ =
-          double.tryParse(event.snapshot.child('AccelZ').value.toString()) ??
-              0.0;
+          double.tryParse(event.snapshot.child('az').value.toString()) ?? 0.0;
 
       final panic =
-          int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0;
+          int.tryParse(event.snapshot.child('panic').value.toString()) ?? 0;
 
       debugPrint("🔥 Marcus AccelX = $accel, Panic = $panic");
       debugPrint("🔥 Marcus using Leader's O2 = $_leaderOxygenRate");
 
       _updateWorker(
         vestId: "VEST-001",
-        bpm: int.tryParse(event.snapshot.child('BPM').value.toString()) ?? 0,
+        bpm: int.tryParse(event.snapshot.child('bpm').value.toString()) ?? 0,
         temp: _fahrenheitToCelsius(
-            double.tryParse(event.snapshot.child('Temp').value.toString()) ??
+            double.tryParse(event.snapshot.child('temp').value.toString()) ??
                 0.0),
-        spo2: int.tryParse(event.snapshot.child('SpO2').value.toString()) ?? 0,
+        spo2: int.tryParse(event.snapshot.child('spo2').value.toString()) ?? 0,
         panic: panic,
-        lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
+        lat: double.tryParse(event.snapshot.child('lat').value.toString()) ??
             0.0,
-        lng: double.tryParse(event.snapshot.child('Lng').value.toString()) ??
+        lng: double.tryParse(event.snapshot.child('lng').value.toString()) ??
             0.0,
-        gas: int.tryParse(event.snapshot.child('Gas').value.toString()) ?? 0,
+        gas: int.tryParse(event.snapshot.child('Pres').value.toString()) ?? 0,
         accelX: accel,
         accelY: accelY,
         accelZ: accelZ,
@@ -117,20 +114,17 @@ class WorkerProvider extends ChangeNotifier {
       if (!event.snapshot.exists || event.snapshot.value == null) return;
 
       final accel =
-          double.tryParse(event.snapshot.child('AccelX').value.toString()) ??
-              0.0;
+          double.tryParse(event.snapshot.child('ax').value.toString()) ?? 0.0;
       final accelY =
-          double.tryParse(event.snapshot.child('AccelY').value.toString()) ??
-              0.0;
+          double.tryParse(event.snapshot.child('ay').value.toString()) ?? 0.0;
       final accelZ =
-          double.tryParse(event.snapshot.child('AccelZ').value.toString()) ??
-              0.0;
+          double.tryParse(event.snapshot.child('az').value.toString()) ?? 0.0;
 
       final panic =
-          int.tryParse(event.snapshot.child('Panic').value.toString()) ?? 0;
+          int.tryParse(event.snapshot.child('panic').value.toString()) ?? 0;
 
       final oxygenRate =
-          int.tryParse(event.snapshot.child('O2').value.toString()) ?? 0;
+          int.tryParse(event.snapshot.child('oxy').value.toString()) ?? 0;
 
       // ✅ Update the stored oxygen value
       _leaderOxygenRate = oxygenRate;
@@ -142,17 +136,17 @@ class WorkerProvider extends ChangeNotifier {
       // ✅ Update Leader (Sarah)
       _updateWorker(
         vestId: "VEST-002",
-        bpm: int.tryParse(event.snapshot.child('BPM').value.toString()) ?? 0,
+        bpm: int.tryParse(event.snapshot.child('bpm').value.toString()) ?? 0,
         temp: _fahrenheitToCelsius(
-            double.tryParse(event.snapshot.child('Temp').value.toString()) ??
+            double.tryParse(event.snapshot.child('temp').value.toString()) ??
                 0.0),
-        spo2: int.tryParse(event.snapshot.child('SpO2').value.toString()) ?? 0,
+        spo2: int.tryParse(event.snapshot.child('spo2').value.toString()) ?? 0,
         panic: panic,
-        lat: double.tryParse(event.snapshot.child('Lat').value.toString()) ??
+        lat: double.tryParse(event.snapshot.child('lat').value.toString()) ??
             0.0,
-        lng: double.tryParse(event.snapshot.child('Lng').value.toString()) ??
+        lng: double.tryParse(event.snapshot.child('lng').value.toString()) ??
             0.0,
-        gas: int.tryParse(event.snapshot.child('Gas').value.toString()) ?? 0,
+        gas: int.tryParse(event.snapshot.child('Pres').value.toString()) ?? 0,
         accelX: accel,
         accelY: accelY,
         accelZ: accelZ,
@@ -290,7 +284,7 @@ class WorkerProvider extends ChangeNotifier {
         return;
       }
 
-      await _rootRef.child(node).update({'Panic': 0});
+      await _rootRef.child(node).update({'panic': 0});
 
       final index = _workers.indexWhere((w) => w.vestId == vestId);
       if (index != -1) {
@@ -335,7 +329,7 @@ class WorkerProvider extends ChangeNotifier {
       return;
     }
 
-    await _rootRef.child(node).update({'Panic': 0});
+    await _rootRef.child(node).update({'panic': 0});
 
     final index = _workers.indexWhere((w) => w.vestId == vestId);
     if (index != -1) {
@@ -376,10 +370,10 @@ class WorkerProvider extends ChangeNotifier {
         notifyListeners();
 
         // Set panic = 0 for Worker (Marcus)
-        await _rootRef.child("Worker").update({'Panic': 0});
+        await _rootRef.child("Worker").update({'panic': 0});
 
         // Set panic = 0 for Leader (Sarah)
-        await _rootRef.child("Leader").update({'Panic': 0});
+        await _rootRef.child("Leader").update({'panic': 0});
 
         // Clear all alerts for both workers
         _thresholdService.clearAllAlerts('VEST-001');
@@ -406,10 +400,10 @@ class WorkerProvider extends ChangeNotifier {
         notifyListeners();
 
         // Set panic = 1 for Worker (Marcus)
-        await _rootRef.child("Worker").update({'Panic': 1});
+        await _rootRef.child("Worker").update({'panic': 1});
 
         // Set panic = 1 for Leader (Sarah)
-        await _rootRef.child("Leader").update({'Panic': 1});
+        await _rootRef.child("Leader").update({'panic': 1});
 
         debugPrint("✅ Emergency broadcast activated (silent mode)");
       } catch (e) {

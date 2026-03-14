@@ -1699,12 +1699,12 @@ class _SafetyAlertsContentState extends State<SafetyAlertsContent> {
       decoration: BoxDecoration(
         color: isResolved
             ? Colors.grey.withOpacity(0.2)
-            : (alert['cardColor'] as Color).withOpacity(0.15),
+            : Colors.red.withOpacity(0.15),
         borderRadius: BorderRadius.circular(16),
         border: Border.all(
           color: isResolved
               ? Colors.grey.withOpacity(0.5)
-              : (alert['cardColor'] as Color).withOpacity(0.6),
+              : Colors.red.withOpacity(0.6),
           width: 2,
         ),
       ),
