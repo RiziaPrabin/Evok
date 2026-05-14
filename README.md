@@ -1,5 +1,8 @@
-# 🦺 EVOK : Embedded Smart Shield for Subterranean Workers
-
+# 🦺 EVOK
+![Flutter](https://img.shields.io/badge/Flutter-Mobile_App-blue)
+![IoT](https://img.shields.io/badge/IoT-Embedded_System-green)
+![Firebase](https://img.shields.io/badge/Firebase-Realtime-orange)
+<br>
 An IoT-based smart wearable safety vest designed to enhance the safety of underground workers through real-time monitoring, hazard detection, and intelligent emergency communication.
 
 ---
@@ -12,6 +15,7 @@ An IoT-based smart wearable safety vest designed to enhance the safety of underg
 ✦ ⚙️ Modules  
 ✦ 📱 User Interface  
 ✦ 🛠️ Tech Stack  
+✦ 📂 Repository Structure<br>
 ✦ 🚀 Installation & Setup  
 ✦ 📖 Usage Guide  
 ✦ 🔮 Future Enhancements  
@@ -136,6 +140,17 @@ The Flutter dashboard provides:
 
 ---
 
+# 📂 Repository Structure
+
+```text
+EVOK/
+│
+├── flutter_app/      # Flutter mobile application
+├── hardware/         # ESP32 and hardware-related code
+├── firebase.json     # Firebase configuration
+├── README.md
+└── .gitignore
+```
 # 🚀 Installation & Setup
 
 ## Clone Repository
@@ -147,17 +162,28 @@ git clone https://github.com/your-username/your-repository-name.git
 ## Flutter Setup
 
 ```bash
+cd flutter_app
 flutter pub get
 flutter run
 ```
+##  Firebase Configuration
 
-## Hardware Setup
+1. Create a Firebase project  
+2. Enable Firebase Realtime Database  
+3. Add the Firebase configuration files to the Flutter project  
+4. Update database rules and connection settings if required
+   
+## Arduino IDE Setup
 
-1. Connect sensors to ESP32  
-2. Upload firmware to the microcontroller  
-3. Configure LoRa communication  
-4. Connect Firebase database  
-5. Launch Flutter monitoring app  
+1. Install Arduino IDE  
+2. Install the required libraries  
+3. Navigate to the `hardware/` folder  
+4. Open the required `.ino` file:
+   - `worker.ino`
+   - `leader.ino`
+   - `server.ino`
+
+5. Upload the code to the respective module
 
 ---
 
