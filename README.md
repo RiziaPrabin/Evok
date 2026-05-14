@@ -50,7 +50,7 @@ By combining IoT, Embedded Systems, Flutter, wireless communication technologies
 ✦ Motion and safety event detection <br>
 ✦ Emergency alert mechanism <br>
 ✦ Wireless communication system <br>
-✦ GPS-based location tracking <br>
+✦ Worker Location tracking <br>
 ✦ Real-time cloud synchronization <br>
 ✦ Supervisor monitoring dashboard <br>
 ✦ Emergency notifications and alerts <br>
