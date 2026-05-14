@@ -15,6 +15,7 @@ An IoT-based smart wearable safety vest designed to enhance the safety of underg
 ✦ 🚀 Installation & Setup  
 ✦ 📖 Usage Guide  
 ✦ 🔮 Future Enhancements  
+✦ 🌍 Sustainable Development Goals  
 ✦ 👥 Contributors  
 
 ---
@@ -140,7 +141,7 @@ The Flutter dashboard provides:
 ## Clone Repository
 
 ```bash
-git clone https://github.com/RiziaPrabin/Evok.git
+git clone https://github.com/your-username/your-repository-name.git
 ```
 
 ## Flutter Setup
@@ -176,6 +177,24 @@ flutter run
 ✦ 🔋 Improved battery optimization  
 ✦ 🧠 Smart hazard prediction models  
 ✦ 🌐 Large-scale worker deployment  
+
+---
+
+# 🌍 Sustainable Development Goals
+
+EVOK aligns with the following United Nations Sustainable Development Goals:
+
+### 🩺 SDG 3 — Good Health and Well-being
+Promotes worker health and safety through continuous physiological monitoring and emergency alert systems.
+
+### 🏭 SDG 8 — Decent Work and Economic Growth
+Enhances workplace safety for underground and industrial workers using smart wearable technology.
+
+### 🏗️ SDG 9 — Industry, Innovation and Infrastructure
+Implements innovative IoT, Embedded Systems, BLE, and LoRa technologies for smart industrial safety solutions.
+
+### 🌆 SDG 11 — Sustainable Cities and Communities
+Supports safer infrastructure and construction environments through real-time hazard detection and monitoring.
 
 ---
 
