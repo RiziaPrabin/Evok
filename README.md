@@ -2,7 +2,9 @@
 ![Flutter](https://img.shields.io/badge/Flutter-Mobile_App-blue)
 ![IoT](https://img.shields.io/badge/IoT-Embedded_System-green)
 ![Firebase](https://img.shields.io/badge/Firebase-Realtime-orange)
+
 <br>
+
 An IoT-based smart wearable safety vest designed to enhance the safety of underground workers through real-time monitoring, hazard detection, and intelligent emergency communication.
 
 ---
@@ -15,7 +17,7 @@ An IoT-based smart wearable safety vest designed to enhance the safety of underg
 ✦ ⚙️ Modules  
 ✦ 📱 User Interface  
 ✦ 🛠️ Tech Stack  
-✦ 📂 Repository Structure<br>
+✦ 📂 Repository Structure  
 ✦ 🚀 Installation & Setup  
 ✦ 📖 Usage Guide  
 ✦ 🔮 Future Enhancements  
@@ -36,23 +38,22 @@ The system integrates:
 ✦ Long-range communication technologies  
 ✦ Live supervisor monitoring dashboard  
 
-By combining IoT, Embedded Systems, Flutter, BLE, LoRa, and Firebase, EVOK provides a scalable and practical worker safety solution.
+By combining IoT, Embedded Systems, Flutter, wireless communication technologies, and cloud integration, EVOK provides a scalable and practical worker safety solution.
 
 ---
 
 # ✨ Key Features
 
 ✦ Real-time worker monitoring <br>
-✦ Heart Rate & SpO₂ tracking <br>
-✦ Gas level detection <br>
-✦ Oxygen level monitoring <br>
-✦ Fall detection using MPU6050 <br>
-✦ Panic emergency button <br>
-✦ Bluetooth + LoRa communication <br>
+✦ Health parameter tracking <br>
+✦ Environmental hazard detection <br>
+✦ Motion and safety event detection <br>
+✦ Emergency alert mechanism <br>
+✦ Wireless communication system <br>
 ✦ GPS-based location tracking <br>
-✦ Firebase real-time synchronization <br>
+✦ Real-time cloud synchronization <br>
 ✦ Supervisor monitoring dashboard <br>
-✦ Emergency alerts & notifications <br>
+✦ Emergency notifications and alerts <br>
 
 ---
 
@@ -69,18 +70,18 @@ By combining IoT, Embedded Systems, Flutter, BLE, LoRa, and Firebase, EVOK provi
 ## 👷 Worker Module
 
 ✦ Collects worker health and environmental data  
-✦ Uses ESP32 integrated with sensors  
+✦ Performs real-time safety monitoring  
 
 ## 📡 Leader Module
 
-✦ Aggregates BLE data from worker nodes  
-✦ Sends long-range LoRa communication  
-✦ Provides multilingual voice alerts  
+✦ Aggregates worker node data  
+✦ Handles long-range communication  
+✦ Provides emergency feedback mechanisms  
 
 ## 🖥️ Server Module
 
-✦ Receives and processes LoRa data  
-✦ Uploads structured data to Firebase  
+✦ Receives and processes incoming data  
+✦ Synchronizes data with cloud services  
 
 ## 📱 App Dashboard
 
@@ -115,15 +116,11 @@ The Flutter dashboard provides:
 
 ## 🔌 Hardware
 
-✦ ESP32  
-✦ MAX30102  
-✦ MPU6050  
-✦ MQ-135  
-✦ AO-03 Oxygen Sensor  
-✦ LoRa RA-02 Module  
-✦ PAM8403 Amplifier  
-✦ Speaker  
-✦ Panic Button  
+✦ Embedded controller platform
+✦ Biometric sensing module  
+✦ Environmental monitoring sensors  
+✦ Long-range communication module  
+✦ Emergency alert components  
 
 ## 💻 Software
 
@@ -131,12 +128,11 @@ The Flutter dashboard provides:
 ✦ Dart  
 ✦ Python  
 ✦ Arduino Framework  
-✦ Firebase Realtime Database  
+✦ Cloud Database Services  
 
 ## 📶 Communication
 
-✦ BLE  
-✦ LoRa  
+✦ Wireless communication technologies  
 
 ---
 
@@ -145,12 +141,14 @@ The Flutter dashboard provides:
 ```text
 EVOK/
 │
-├── flutter_app/      # Flutter mobile application
-├── hardware/         # ESP32 and hardware-related code
-├── firebase.json     # Firebase configuration
+├── flutter_app/
+├── firebase.json
 ├── README.md
 └── .gitignore
 ```
+
+---
+
 # 🚀 Installation & Setup
 
 ## Clone Repository
@@ -166,34 +164,14 @@ cd flutter_app
 flutter pub get
 flutter run
 ```
-##  Firebase Configuration
 
-1. Create a Firebase project  
-2. Enable Firebase Realtime Database  
-3. Add the Firebase configuration files to the Flutter project  
-4. Update database rules and connection settings if required
-   
-## Arduino IDE Setup
+## 🔥 Backend Configuration
 
-1. Install Arduino IDE  
-2. Install the required libraries  
-3. Navigate to the `hardware/` folder  
-4. Open the required `.ino` file:
-   - `worker.ino`
-   - `leader.ino`
-   - `server.ino`
+Configure the required backend services and environment settings before running the application.
 
-5. Upload the code to the respective module
+## 🔧 Hardware Implementation
 
----
-
-# 📖 Usage Guide
-
-1️⃣ Power ON the worker and leader modules <br>
-2️⃣ Sensors begin collecting worker data <br>
-3️⃣ Data is transmitted via BLE and LoRa <br>
-4️⃣ Dashboard displays real-time monitoring <br>
-5️⃣ Alerts are triggered during emergencies <br>
+The hardware implementation and embedded firmware used in EVOK are currently kept private.
 
 ---
 
@@ -211,15 +189,19 @@ flutter run
 EVOK aligns with the following United Nations Sustainable Development Goals:
 
 ### 🩺 SDG 3 — Good Health and Well-being
+
 Promotes worker health and safety through continuous physiological monitoring and emergency alert systems.
 
 ### 🏭 SDG 8 — Decent Work and Economic Growth
+
 Enhances workplace safety for underground and industrial workers using smart wearable technology.
 
 ### 🏗️ SDG 9 — Industry, Innovation and Infrastructure
-Implements innovative IoT, Embedded Systems, BLE, and LoRa technologies for smart industrial safety solutions.
+
+Implements innovative IoT, Embedded Systems, and smart safety technologies for industrial environments.
 
 ### 🌆 SDG 11 — Sustainable Cities and Communities
+
 Supports safer infrastructure and construction environments through real-time hazard detection and monitoring.
 
 ---
